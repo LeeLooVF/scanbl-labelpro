@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0b1120" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>ScanBL LabelPro — Cloud Production</title>
+  <title>ScanBL LabelPro</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Libre+Barcode+128&display=swap" rel="stylesheet">
+  <style id="dynamicPrintStyle">
+    @page { size: 50mm 30mm; margin: 0; }
+  </style>
   <style>
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
     body {
@@ -20,7 +21,7 @@
       overflow-x: hidden;
     }
     .mono { font-family: 'JetBrains Mono', monospace; }
-    .barcode { font-family: 'Libre Barcode 128', cursive; font-size: 38px; line-height: 1; }
+    .barcode { font-family: 'Libre Barcode 128', cursive; font-size: 36px; line-height: 1; }
     @keyframes laser {
       0%, 100% { top: 12%; opacity: 0.85; }
       50% { top: 86%; opacity: 1; }
@@ -35,7 +36,15 @@
       animation: laser 2.6s ease-in-out infinite;
       pointer-events: none;
     }
-    /* Zone d'impression réelle (Spooler Android / PDF / RawBT) */
+    /* Inputs fichiers accessibles au WebView Android (jamais display:none) */
+    .offscreen-file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      overflow: hidden;
+      z-index: -1;
+    }
     #realPrintArea { display: none; }
     @media print {
       body * { visibility: hidden; }
@@ -53,119 +62,102 @@
       .print-label-sheet {
         page-break-after: always;
         break-after: page;
-        width: 50mm;
-        min-height: 30mm;
-        padding: 2mm 3mm;
-        border: 1px dashed #ccc;
-        margin: 0 auto 2mm auto;
+        padding: 1.5mm 2.5mm;
+        margin: 0 auto;
         font-family: 'Inter', sans-serif;
         color: #000;
         background: #fff;
+        box-sizing: border-box;
+        overflow: hidden;
       }
     }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between bg-[#090e1a] text-slate-100 select-none">
 
-  <!-- Zone invisible dédiée au Spooler d'impression natif Android / PDF -->
+  <!-- Zone d'impression thermique dédiée -->
   <div id="realPrintArea"></div>
 
-  <!-- Application Principale -->
+  <!-- Inputs fichiers globaux compatibles Android WebView -->
+  <input id="fileInputGallery" type="file" accept="image/*" class="offscreen-file-input" onchange="handleImageFile(event)" />
+  <input id="fileInputCamera" type="file" accept="image/*" capture="environment" class="offscreen-file-input" onchange="handleImageFile(event)" />
+
+  <!-- Application Principale (Sans la barre supérieure d'état) -->
   <div id="appRoot" class="max-w-md w-full mx-auto min-h-screen flex flex-col bg-[#0d1323] shadow-2xl relative pb-20">
 
-    <!-- Barre d'état supérieure -->
-    <div class="px-4 py-1.5 bg-[#070b14] flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800/80">
-      <div class="flex items-center gap-2">
-        <span id="clockDisplay" class="mono font-semibold text-slate-200">--:--</span>
-        <span id="printerBadgeTop" class="px-1.5 py-0.5 rounded bg-cyan-950/90 text-cyan-300 border border-cyan-700/50 text-[10px] font-bold">UNIVERSEL-PDF</span>
-        <span id="cloudStatusTop" class="px-1.5 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-700/50 text-[10px] font-bold flex items-center gap-1">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> CLOUD LIVE
-        </span>
-      </div>
-      <div class="flex items-center gap-2 mono text-[10px]">
-        <span id="terminalIdBadge" class="text-slate-400">TERM-01</span>
-      </div>
-    </div>
-
-    <!-- Header Application -->
-    <header class="px-4 py-3 bg-[#0f172a]/90 backdrop-blur border-b border-slate-800 flex items-center justify-between sticky top-0 z-30">
+    <!-- Header Application Direct -->
+    <header class="px-4 py-3 bg-[#0f172a]/95 backdrop-blur border-b border-slate-800 flex items-center justify-between sticky top-0 z-30">
       <div class="flex items-center gap-2.5">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/20">BL</div>
         <div>
           <div class="flex items-center gap-1.5">
             <h1 class="font-extrabold text-sm tracking-tight text-white">ScanBL <span class="text-cyan-400">LabelPro</span></h1>
-            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">V2.5 PROD</span>
+            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">V2.6 PROD</span>
           </div>
-          <p id="headerSubtitle" class="text-[11px] text-slate-400">Scanner IA & Étiquetage Cloud Partagé</p>
+          <p class="text-[11px] text-slate-400">Scanner IA & Étiquetage Cloud Partagé</p>
         </div>
       </div>
 
-      <!-- Bouton Tiroir Sorties DLC -->
-      <button onclick="toggleSortieDrawer(true)" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5 text-xs font-semibold transition">
+      <button type="button" onclick="toggleSortieDrawer(true)" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5 text-xs font-semibold transition">
         <span>📋 Sorties</span>
         <span id="sortieCountBadge" class="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-bold">0</span>
       </button>
     </header>
 
-    <!-- Contenu Dynamique des Onglets -->
+    <!-- Contenu Dynamique -->
     <main class="flex-1 p-3.5 space-y-3 overflow-y-auto">
 
       <!-- ==================== ONGLET 1 : SCANNER CAMÉRA ==================== -->
       <section id="tab-scanner" class="space-y-3">
         <div class="relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 aspect-[3/4] flex flex-col justify-between shadow-inner">
-          <!-- Flux vidéo réel de la caméra arrière -->
           <video id="cameraStream" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover hidden"></video>
-          <!-- Image capturée en aperçu -->
           <img id="capturedPreview" alt="Aperçu BL" class="absolute inset-0 w-full h-full object-contain bg-slate-950 hidden" />
 
-          <!-- Fond par défaut si caméra non démarrée -->
-          <div id="cameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
+          <!-- Écran d'accueil du viseur -->
+          <div id="cameraPlaceholder" class="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
             <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-3xl mb-3">📷</div>
             <p class="text-sm font-bold text-slate-200">Prêt à scanner votre Bon de Livraison</p>
-            <p class="text-xs text-slate-400 mt-1 max-w-xs">Activez la caméra en direct ou prenez une photo haute définition pour extraire les produits et DLC via Gemini Vision.</p>
-            <button onclick="startLiveCamera()" class="mt-4 px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-xs font-bold hover:bg-cyan-500/30">
+            <p class="text-xs text-slate-400 mt-1 max-w-xs">Activez le viseur direct ou prenez une photo pour extraire automatiquement vos produits et DLC.</p>
+            <button type="button" onclick="startLiveCamera(true)" class="mt-4 px-4 py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-xs font-bold active:scale-95 transition">
               Activer le viseur caméra direct
             </button>
           </div>
 
-          <!-- Repères de cadrage & ligne laser -->
           <div class="laser-line"></div>
-          <div class="relative z-10 p-3 flex justify-between items-center bg-gradient-to-b from-black/70 to-transparent">
+          <div class="relative z-20 p-3 flex justify-between items-center bg-gradient-to-b from-black/70 to-transparent">
             <span class="text-[11px] mono px-2 py-0.5 rounded bg-black/60 text-cyan-300 border border-cyan-500/30">GEMINI 2.5 FLASH • OCR</span>
-            <button onclick="syncFromCloud(true)" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-300 hover:text-white">
+            <button type="button" onclick="syncFromCloud(true)" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-300 active:scale-95">
               🔄 Sync Cloud
             </button>
           </div>
 
-          <!-- Overlay d'analyse IA en cours -->
-          <div id="scanLoadingOverlay" class="hidden absolute inset-0 z-20 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+          <!-- Overlay d'analyse IA -->
+          <div id="scanLoadingOverlay" class="hidden absolute inset-0 z-30 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
             <div class="w-12 h-12 rounded-full border-4 border-cyan-400 border-t-transparent animate-spin mb-3"></div>
             <p class="text-sm font-bold text-white">Transcription Gemini Vision en cours...</p>
-            <p id="scanLoadingSub" class="text-xs text-cyan-300 mt-1 mono">Envoi sécurisé vers /scan...</p>
+            <p class="text-xs text-cyan-300 mt-1 mono">Extraction des produits et dates DLC...</p>
           </div>
 
-          <!-- Contrôles bas de caméra -->
-          <div class="relative z-10 p-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex items-center justify-around">
-            <!-- Import Galerie / Photo Native -->
-            <label class="cursor-pointer flex flex-col items-center gap-1 text-[11px] text-slate-300 hover:text-white">
-              <div class="w-11 h-11 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-lg">🖼️</div>
+          <!-- Contrôles bas de caméra (Boutons directs compatibles WebView APK) -->
+          <div class="relative z-20 p-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex items-center justify-around">
+            <!-- Bouton Photo / Fichier -->
+            <button type="button" onclick="openGalleryPicker()" class="flex flex-col items-center gap-1 text-[11px] text-slate-300 active:scale-95 transition">
+              <div class="w-12 h-12 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-lg shadow">🖼️</div>
               <span>Photo / Fichier</span>
-              <input id="fileInputGallery" type="file" accept="image/*" class="hidden" onchange="handleImageFile(event)" />
-            </label>
+            </button>
 
-            <!-- Bouton Déclencheur Principal -->
-            <button onclick="triggerCapture()" class="w-18 h-18 p-1.5 rounded-full border-4 border-cyan-400 bg-cyan-500/20 hover:scale-105 active:scale-95 transition flex items-center justify-center shadow-lg shadow-cyan-500/30">
-              <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-xs">
-                SCAN BL
+            <!-- Bouton Principal SCAN -->
+            <button type="button" onclick="triggerCapture()" class="p-1.5 rounded-full border-4 border-cyan-400 bg-cyan-500/20 active:scale-95 transition flex items-center justify-center shadow-lg shadow-cyan-500/30">
+              <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-sm tracking-wider">
+                SCAN
               </div>
             </button>
 
-            <!-- Appareil Photo Natif Android Direct -->
-            <label class="cursor-pointer flex flex-col items-center gap-1 text-[11px] text-slate-300 hover:text-white">
-              <div class="w-11 h-11 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-lg">📸</div>
+            <!-- Bouton Appareil HD -->
+            <button type="button" onclick="openNativeCameraPicker()" class="flex flex-col items-center gap-1 text-[11px] text-slate-300 active:scale-95 transition">
+              <div class="w-12 h-12 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-lg shadow">📸</div>
               <span>Appareil HD</span>
-              <input id="fileInputCamera" type="file" accept="image/*" capture="environment" class="hidden" onchange="handleImageFile(event)" />
-            </label>
+            </button>
           </div>
         </div>
 
@@ -180,15 +172,15 @@
             <h2 class="text-sm font-bold text-white"><span id="verifyTotalRefs">0</span> référence(s) • <span id="verifyTotalLabels" class="text-emerald-400">0</span> étiquette(s)</h2>
           </div>
           <div class="flex gap-1.5">
-            <button onclick="openItemModal()" class="px-2.5 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold">+ Ajouter</button>
-            <button onclick="clearVerifyList()" class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold">Vider</button>
+            <button type="button" onclick="openItemModal()" class="px-2.5 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold">+ Ajouter</button>
+            <button type="button" onclick="clearVerifyList()" class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold">Vider</button>
           </div>
         </div>
 
         <div id="verifyListContainer" class="space-y-2.5"></div>
 
         <div id="verifyBottomAction" class="pt-2">
-          <button onclick="switchTab('etiquettes')" class="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/20">
+          <button type="button" onclick="switchTab('etiquettes')" class="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/20">
             Voir et Imprimer les Étiquettes →
           </button>
         </div>
@@ -198,10 +190,10 @@
       <section id="tab-etiquettes" class="hidden space-y-3">
         <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
           <div>
-            <p class="text-[11px] uppercase tracking-wider text-emerald-400 font-bold">Aperçu Thermique (50×30mm)</p>
+            <p class="text-[11px] uppercase tracking-wider text-emerald-400 font-bold">Aperçu Rouleau (<span id="labelFormatTitleBadge">50×30 mm</span>)</p>
             <p class="text-xs text-slate-300">L'impression archive dans l'Historique et vide Vérifier</p>
           </div>
-          <button onclick="printAllVerifyLabels()" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-md">
+          <button type="button" onclick="printAllVerifyLabels()" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-md">
             🖨️ Imprimer tout
           </button>
         </div>
@@ -217,23 +209,21 @@
               <p class="text-[10px] uppercase tracking-wider text-cyan-400 font-bold">Registre Cloud Partagé</p>
               <h2 class="text-sm font-extrabold text-white"><span id="historyTotalCount">0</span> lots d'étiquettes générés</h2>
             </div>
-            <button onclick="moveAllExpiredToSortie()" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/25 flex items-center gap-1.5">
+            <button type="button" onclick="moveAllExpiredToSortie()" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/25 flex items-center gap-1.5">
               <span>📤 Sortir les dates passées</span>
             </button>
           </div>
 
-          <!-- Recherche -->
           <div class="relative">
             <input id="historySearchInput" type="text" oninput="renderHistory()" placeholder="Rechercher un produit, n° de lot ou BL..." class="w-full pl-3 pr-8 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500" />
-            <button onclick="document.getElementById('historySearchInput').value=''; renderHistory();" class="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300 text-xs">✕</button>
+            <button type="button" onclick="document.getElementById('historySearchInput').value=''; renderHistory();" class="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300 text-xs">✕</button>
           </div>
 
-          <!-- Filtres DLC -->
           <div class="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px] font-bold">
-            <button id="filter-all" onclick="setHistoryFilter('all')" class="py-1.5 rounded-lg bg-cyan-500 text-slate-950">Toutes (0)</button>
-            <button id="filter-expired" onclick="setHistoryFilter('expired')" class="py-1.5 rounded-lg text-slate-400">Passées (0)</button>
-            <button id="filter-short" onclick="setHistoryFilter('short')" class="py-1.5 rounded-lg text-slate-400">Courtes (0)</button>
-            <button id="filter-valid" onclick="setHistoryFilter('valid')" class="py-1.5 rounded-lg text-slate-400">Valides (0)</button>
+            <button type="button" id="filter-all" onclick="setHistoryFilter('all')" class="py-1.5 rounded-lg bg-cyan-500 text-slate-950">Toutes (0)</button>
+            <button type="button" id="filter-expired" onclick="setHistoryFilter('expired')" class="py-1.5 rounded-lg text-slate-400">Passées (0)</button>
+            <button type="button" id="filter-short" onclick="setHistoryFilter('short')" class="py-1.5 rounded-lg text-slate-400">Courtes (0)</button>
+            <button type="button" id="filter-valid" onclick="setHistoryFilter('valid')" class="py-1.5 rounded-lg text-slate-400">Valides (0)</button>
           </div>
         </div>
 
@@ -242,23 +232,45 @@
 
       <!-- ==================== ONGLET 5 : RÉGLAGES ==================== -->
       <section id="tab-reglages" class="hidden space-y-3">
+        <!-- Choix étendu des formats d'étiquettes en rouleau -->
+        <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-cyan-400">Format du Rouleau d'Étiquettes</h3>
+            <span id="activeRollDimBadge" class="mono text-[11px] px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">50 × 30 mm</span>
+          </div>
+
+          <div>
+            <label class="text-[11px] text-slate-400 block mb-1.5">Sélectionnez le format de votre rouleau thermique :</label>
+            <select id="rollFormatSelect" onchange="changeRollFormat(this.value)" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-semibold focus:outline-none focus:border-cyan-400">
+              <option value="30x20">30 × 20 mm — Mini Étiquette Prix / Date</option>
+              <option value="40x20">40 × 20 mm — Petit Rouleau Standard</option>
+              <option value="40x30">40 × 30 mm — Rouleau Compact (Niimbot / Phomemo)</option>
+              <option value="50x25">50 × 25 mm — Étiquette Courte</option>
+              <option value="50x30" selected>50 × 30 mm — Standard Rayon & DLC (Par défaut)</option>
+              <option value="50x40">50 × 40 mm — Format Moyen Multi-infos</option>
+              <option value="50x50">50 × 50 mm — Format Carré</option>
+              <option value="57x40">57 × 40 mm — Ticket Thermique Terminal / TPE</option>
+              <option value="60x40">60 × 40 mm — Grand Format Logistique / Zebra</option>
+              <option value="62x29">62 × 29 mm — Rouleau Brother DK-11209</option>
+              <option value="80x50">80 × 50 mm — Format Carton / Réserve</option>
+              <option value="100x50">100 × 50 mm — Étiquette Palette / Colis</option>
+              <option value="100x150">100 × 150 mm — Format Expédition Palette A6</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Mode d'impression Universel vs Bluetooth Direct -->
         <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
           <h3 class="text-xs font-extrabold uppercase tracking-wider text-cyan-400">Mode d'Impression & Matériel</h3>
           <div class="grid grid-cols-2 gap-2">
-            <button id="btnModeUniversal" onclick="setPrintMode('UNIVERSAL')" class="p-3 rounded-xl border text-left transition">
+            <button type="button" id="btnModeUniversal" onclick="setPrintMode('UNIVERSAL')" class="p-3 rounded-xl border text-left transition">
               <div class="text-xs font-extrabold text-white">Mode Universel</div>
               <div class="text-[10px] text-slate-400 mt-0.5">PDF / Spooler Android / RawBT (Toutes imprimantes)</div>
             </button>
-            <button id="btnModeBT" onclick="setPrintMode('BT')" class="p-3 rounded-xl border text-left transition">
+            <button type="button" id="btnModeBT" onclick="setPrintMode('BT')" class="p-3 rounded-xl border text-left transition">
               <div class="text-xs font-extrabold text-white">Bluetooth Direct</div>
               <div class="text-[10px] text-slate-400 mt-0.5">Zebra ZPL / Brother / Niimbot / ESC-POS</div>
             </button>
-          </div>
-
-          <div class="pt-1">
-            <label class="text-[11px] text-slate-400 block mb-1">Nom du terminal (affiché aux collègues)</label>
-            <input id="terminalNameInput" type="text" onchange="saveTerminalName()" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white mono" />
           </div>
         </div>
 
@@ -266,7 +278,7 @@
         <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-extrabold uppercase tracking-wider text-emerald-400">Statut des Services Cloud</h3>
-            <button onclick="testCloudHealth()" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold border border-slate-700">
+            <button type="button" onclick="testCloudHealth()" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold border border-slate-700">
               Tester latence
             </button>
           </div>
@@ -291,7 +303,7 @@
         <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Version de l'application</span>
-            <span class="mono font-bold text-slate-200">v2.5.0-prod (Cloudflare KV)</span>
+            <span class="mono font-bold text-slate-200">v2.6.0-prod (Cloudflare KV)</span>
           </div>
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Dernière synchro Cloud</span>
@@ -299,10 +311,10 @@
           </div>
 
           <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick="softRefreshUI()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-300">
+            <button type="button" onclick="softRefreshUI()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-300">
               🔄 Actualiser l'interface
             </button>
-            <button onclick="hardForceRefresh()" class="py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-xs font-bold text-rose-300">
+            <button type="button" onclick="hardForceRefresh()" class="py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-xs font-bold text-rose-300">
               ⚡ Actualisation forcée
             </button>
           </div>
@@ -313,20 +325,20 @@
 
     <!-- Navigation Inférieure -->
     <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0b1120]/95 backdrop-blur border-t border-slate-800 grid grid-cols-5 py-1.5 z-30 text-[11px]">
-      <button onclick="switchTab('scanner')" id="nav-scanner" class="flex flex-col items-center py-1 text-cyan-400 font-bold">
+      <button type="button" onclick="switchTab('scanner')" id="nav-scanner" class="flex flex-col items-center py-1 text-cyan-400 font-bold">
         <span class="text-base">📷</span><span>Scanner</span>
       </button>
-      <button onclick="switchTab('verifier')" id="nav-verifier" class="relative flex flex-col items-center py-1 text-slate-400">
+      <button type="button" onclick="switchTab('verifier')" id="nav-verifier" class="relative flex flex-col items-center py-1 text-slate-400">
         <span class="text-base">📋</span><span>Vérifier</span>
         <span id="badgeVerifyNav" class="hidden absolute top-0.5 right-3 px-1.5 rounded-full bg-cyan-500 text-slate-950 text-[9px] font-extrabold">0</span>
       </button>
-      <button onclick="switchTab('etiquettes')" id="nav-etiquettes" class="flex flex-col items-center py-1 text-slate-400">
+      <button type="button" onclick="switchTab('etiquettes')" id="nav-etiquettes" class="flex flex-col items-center py-1 text-slate-400">
         <span class="text-base">🖨️</span><span>Étiquettes</span>
       </button>
-      <button onclick="switchTab('historique')" id="nav-historique" class="flex flex-col items-center py-1 text-slate-400">
+      <button type="button" onclick="switchTab('historique')" id="nav-historique" class="flex flex-col items-center py-1 text-slate-400">
         <span class="text-base">🕒</span><span>Historique</span>
       </button>
-      <button onclick="switchTab('reglages')" id="nav-reglages" class="flex flex-col items-center py-1 text-slate-400">
+      <button type="button" onclick="switchTab('reglages')" id="nav-reglages" class="flex flex-col items-center py-1 text-slate-400">
         <span class="text-base">⚙️</span><span>Réglages</span>
       </button>
     </nav>
@@ -335,7 +347,7 @@
   <!-- Modal Ajout / Édition d'article -->
   <div id="itemModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 space-y-3">
-      <h3 id="modalTitle" class="text-sm font-extrabold text-white">Ajouter / Modifier une étiquette</h3>
+      <h3 class="text-sm font-extrabold text-white">Ajouter / Modifier une étiquette</h3>
       <input type="hidden" id="modalItemId" />
       <div>
         <label class="text-[11px] text-slate-400">Désignation du produit</label>
@@ -362,8 +374,8 @@
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-2">
-        <button onclick="closeItemModal()" class="px-3 py-2 rounded-xl bg-slate-800 text-xs text-slate-300">Annuler</button>
-        <button onclick="saveItemModal()" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">Enregistrer</button>
+        <button type="button" onclick="closeItemModal()" class="px-3 py-2 rounded-xl bg-slate-800 text-xs text-slate-300">Annuler</button>
+        <button type="button" onclick="saveItemModal()" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -377,12 +389,12 @@
             <h3 class="text-sm font-extrabold text-white">Liste de Retrait / Dates Passées</h3>
             <p class="text-[11px] text-slate-400">Synchronisée sur tous les terminaux</p>
           </div>
-          <button onclick="toggleSortieDrawer(false)" class="px-2.5 py-1 rounded-lg bg-slate-800 text-xs">Fermer</button>
+          <button type="button" onclick="toggleSortieDrawer(false)" class="px-2.5 py-1 rounded-lg bg-slate-800 text-xs">Fermer</button>
         </div>
         <div id="sortieDrawerList" class="space-y-2"></div>
       </div>
       <div class="pt-3 border-t border-slate-800 space-y-2">
-        <button onclick="printSortieTicket()" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs">
+        <button type="button" onclick="printSortieTicket()" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs">
           🖨️ Imprimer le ticket de retrait DLC
         </button>
       </div>
@@ -393,7 +405,7 @@
   <div id="toastBox" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-slate-900/95 border border-cyan-500/50 text-xs font-semibold text-white shadow-xl"></div>
 
   <script>
-    // ==================== ÉTAT GLOBAL CLOUD ====================
+    // ==================== ÉTAT GLOBAL CLOUD & FORMATS ====================
     let appState = {
       verifyItems: [],
       historyItems: [],
@@ -401,33 +413,41 @@
     };
     let currentHistoryFilter = 'all';
     let printMode = localStorage.getItem('scanbl_print_mode') || 'UNIVERSAL';
-    let terminalId = localStorage.getItem('scanbl_terminal_id') || ('TERM-' + Math.floor(100 + Math.random() * 900));
-    localStorage.setItem('scanbl_terminal_id', terminalId);
-
+    let rollFormat = localStorage.getItem('scanbl_roll_format') || '50x30';
     let mediaStream = null;
 
-    // ==================== INITIALISATION ====================
     window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('terminalIdBadge').textContent = terminalId;
-      document.getElementById('terminalNameInput').value = terminalId;
-      updateClock();
-      setInterval(updateClock, 15000);
+      document.getElementById('rollFormatSelect').value = rollFormat;
+      changeRollFormat(rollFormat, false);
       setPrintMode(printMode);
       syncFromCloud(false);
-      // Synchro Cloud automatique toutes les 8 secondes
+      // Tentative de démarrage automatique du viseur caméra dès l'ouverture
+      startLiveCamera(false);
       setInterval(() => syncFromCloud(false), 8000);
     });
-
-    function updateClock() {
-      const now = new Date();
-      document.getElementById('clockDisplay').textContent = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    }
 
     function showToast(msg) {
       const box = document.getElementById('toastBox');
       box.textContent = msg;
       box.classList.remove('hidden');
       setTimeout(() => box.classList.add('hidden'), 2800);
+    }
+
+    // ==================== GESTION DES FORMATS DE ROULEAU ====================
+    function getRollDimensions() {
+      const parts = (rollFormat || '50x30').split('x');
+      return { w: parseInt(parts[0]) || 50, h: parseInt(parts[1]) || 30 };
+    }
+
+    function changeRollFormat(val, notify = true) {
+      rollFormat = val;
+      localStorage.setItem('scanbl_roll_format', val);
+      const { w, h } = getRollDimensions();
+      document.getElementById('activeRollDimBadge').textContent = `${w} × ${h} mm`;
+      document.getElementById('labelFormatTitleBadge').textContent = `${w}×${h} mm`;
+      document.getElementById('dynamicPrintStyle').innerHTML = `@page { size: ${w}mm ${h}mm; margin: 0; }`;
+      renderLabelsPreview();
+      if (notify) showToast(`📏 Format rouleau réglé sur ${w}×${h} mm`);
     }
 
     // ==================== SYNCHRONISATION CLOUD (/state) ====================
@@ -444,7 +464,7 @@
         renderAll();
         if (manual) showToast('☁️ Données Cloud synchronisées');
       } catch (err) {
-        document.getElementById('statusStateApi').textContent = 'MODE HORS-LIGNE TEMP.';
+        document.getElementById('statusStateApi').textContent = 'HORS-LIGNE TEMP.';
       }
     }
 
@@ -457,52 +477,79 @@
           body: JSON.stringify({
             verifyItems: appState.verifyItems,
             historyItems: appState.historyItems,
-            sortieIds: appState.sortieIds,
-            terminalId: terminalId
+            sortieIds: appState.sortieIds
           })
         });
         document.getElementById('lastSyncTimeDisplay').textContent = new Date().toLocaleTimeString('fr-FR');
       } catch (e) {
-        showToast('⚠️ Erreur d\'enregistrement Cloud');
+        showToast('⚠️ Erreur de sauvegarde Cloud');
       }
     }
 
-    // ==================== CAMÉRA & SCAN GEMINI (/scan) ====================
-    async function startLiveCamera() {
+    // ==================== CAMÉRA, FICHIERS & BOUTON SCAN ====================
+    function openGalleryPicker() {
+      const input = document.getElementById('fileInputGallery');
+      input.value = '';
+      input.click();
+    }
+
+    function openNativeCameraPicker() {
+      const input = document.getElementById('fileInputCamera');
+      input.value = '';
+      input.click();
+    }
+
+    async function startLiveCamera(fallbackToPicker = true) {
       try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: false
-        });
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Caméra WebRTC non supportée');
+        }
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(t => t.stop());
+        }
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            audio: false
+          });
+        } catch (e1) {
+          mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
         const video = document.getElementById('cameraStream');
         video.srcObject = mediaStream;
+        await video.play();
         video.classList.remove('hidden');
         document.getElementById('cameraPlaceholder').classList.add('hidden');
         document.getElementById('capturedPreview').classList.add('hidden');
       } catch (err) {
-        // Repli immédiat sur l'appareil photo natif Android
-        document.getElementById('fileInputCamera').click();
+        if (fallbackToPicker) {
+          openNativeCameraPicker();
+        }
       }
     }
 
     function triggerCapture() {
       const video = document.getElementById('cameraStream');
-      if (mediaStream && !video.classList.contains('hidden')) {
+      if (mediaStream && !video.classList.contains('hidden') && video.videoWidth > 0) {
         const canvas = document.getElementById('captureCanvas');
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 960;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        const preview = document.getElementById('capturedPreview');
+        preview.src = dataUrl;
+        preview.classList.remove('hidden');
         sendImageToGemini(dataUrl);
       } else {
-        document.getElementById('fileInputCamera').click();
+        openNativeCameraPicker();
       }
     }
 
     function handleImageFile(event) {
       const file = event.target.files?.[0];
       if (!file) return;
+      showToast('📸 Chargement de la photo...');
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
@@ -539,7 +586,7 @@
           body: JSON.stringify({ imageBase64: dataUrl, mimeType: 'image/jpeg' })
         });
         const data = await res.json();
-        if (!res.ok || data.error) throw new Error(data.error || 'Erreur de transcription');
+        if (!res.ok || data.error) throw new Error(data.error || 'Erreur API /scan');
 
         const today = new Date().toISOString().split('T')[0];
         const blNumber = data.blNumber || ('BL-' + Math.floor(10000 + Math.random() * 89999));
@@ -547,7 +594,7 @@
         const items = Array.isArray(data.items) ? data.items : [];
 
         if (items.length === 0) {
-          showToast('⚠️ Aucun produit détecté sur la photo');
+          showToast('⚠️ Aucun article détecté sur la photo');
           overlay.classList.add('hidden');
           return;
         }
@@ -561,13 +608,13 @@
             lot: it.lot || ('LOT-' + Math.floor(100 + Math.random() * 899)),
             barcode: it.barcode || '3250390000000',
             blNumber: blNumber,
-            qty: 1 // Toujours réglé sur 1 par défaut
+            qty: 1
           });
         });
 
         await pushToCloud();
         overlay.classList.add('hidden');
-        showToast(`✅ ${items.length} produit(s) extraits du BL`);
+        showToast(`✅ ${items.length} produit(s) extraits`);
         switchTab('verifier');
       } catch (err) {
         overlay.classList.add('hidden');
@@ -612,7 +659,6 @@
       renderSortieDrawer();
     }
 
-    // ==================== RENDU VÉRIFIER ====================
     function renderVerify() {
       const container = document.getElementById('verifyListContainer');
       const totalRefs = appState.verifyItems.length;
@@ -636,9 +682,9 @@
           <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
             <div class="text-3xl">✅</div>
             <p class="text-sm font-bold text-white">Aucun article en attente de vérification</p>
-            <p class="text-xs text-slate-400">Scannez un nouveau bon de livraison pour générer vos étiquettes.</p>
-            <button onclick="switchTab('scanner')" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">
-              Scanner un BL
+            <p class="text-xs text-slate-400">Scannez un bon de livraison pour générer vos étiquettes.</p>
+            <button type="button" onclick="switchTab('scanner')" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">
+              Aller au Scanner
             </button>
           </div>`;
         return;
@@ -660,17 +706,17 @@
           <div class="flex items-center justify-between text-xs text-slate-300 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800/80">
             <span>Reçu le : <strong class="mono text-white">${formatDateFR(item.receivedDate)}</strong></span>
             <div class="flex items-center gap-2">
-              <button onclick="changeVerifyQty('${item.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-800 font-bold">-</button>
+              <button type="button" onclick="changeVerifyQty('${item.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-800 font-bold">-</button>
               <span class="mono font-bold text-cyan-300">${item.qty} étiq.</span>
-              <button onclick="changeVerifyQty('${item.id}', 1)" class="w-7 h-7 rounded-lg bg-slate-800 font-bold">+</button>
+              <button type="button" onclick="changeVerifyQty('${item.id}', 1)" class="w-7 h-7 rounded-lg bg-slate-800 font-bold">+</button>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-2 pt-1">
-            <button onclick="openItemModal('${item.id}')" class="py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+            <button type="button" onclick="openItemModal('${item.id}')" class="py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
               ✏️ Éditer
             </button>
-            <button onclick="deleteVerifyItem('${item.id}')" class="py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-semibold text-rose-300">
+            <button type="button" onclick="deleteVerifyItem('${item.id}')" class="py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-semibold text-rose-300">
               🗑️ Supprimer l'étiquette
             </button>
           </div>
@@ -696,9 +742,10 @@
       pushToCloud();
     }
 
-    // ==================== RENDU ÉTIQUETTES & IMPRESSION ====================
+    // ==================== APERÇU ÉTIQUETTES & IMPRESSION MULTI-FORMATS ====================
     function renderLabelsPreview() {
       const container = document.getElementById('labelsPreviewContainer');
+      const { w, h } = getRollDimensions();
       if (appState.verifyItems.length === 0) {
         container.innerHTML = `<div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-400">Aucune étiquette en attente d'impression.</div>`;
         return;
@@ -707,7 +754,7 @@
         <div class="bg-white text-slate-950 rounded-xl p-3.5 shadow-lg border-2 border-slate-300 max-w-xs mx-auto space-y-1.5">
           <div class="flex justify-between items-start border-b border-slate-300 pb-1">
             <span class="font-black text-xs uppercase leading-tight">${item.name}</span>
-            <span class="mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white">x${item.qty}</span>
+            <span class="mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white">${w}×${h}mm • x${item.qty}</span>
           </div>
           <div class="flex justify-between items-center bg-slate-100 px-2 py-1 rounded">
             <span class="text-[10px] font-bold uppercase">DLC / DLUO :</span>
@@ -731,7 +778,6 @@
         return;
       }
 
-      // Construction des étiquettes pour le spooler d'impression Android / PDF
       const printArea = document.getElementById('realPrintArea');
       let html = '';
       appState.verifyItems.forEach(item => {
@@ -742,7 +788,6 @@
       });
       printArea.innerHTML = html;
 
-      // Archivage dans l'historique partagé et vidage immédiat de VÉRIFIER
       appState.verifyItems.forEach(item => {
         appState.historyItems.unshift({
           ...item,
@@ -767,18 +812,18 @@
     }
 
     function buildPrintableLabelHTML(item) {
+      const { w, h } = getRollDimensions();
+      const compact = h <= 25;
       return `
-        <div class="print-label-sheet">
-          <div style="font-weight:900;font-size:11pt;border-bottom:1px solid #000;padding-bottom:2px;margin-bottom:3px;">${item.name}</div>
-          <div style="display:flex;justify-content:space-between;font-size:10pt;font-weight:800;margin-bottom:2px;">
+        <div class="print-label-sheet" style="width:${w}mm; min-height:${h}mm;">
+          <div style="font-weight:900;font-size:${compact ? '8.5pt' : '10.5pt'};border-bottom:1px solid #000;padding-bottom:1px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+          <div style="display:flex;justify-content:space-between;font-size:${compact ? '8pt' : '9.5pt'};font-weight:800;margin-bottom:1px;">
             <span>DLC/DLUO:</span><span>${formatDateFR(item.dlc)}</span>
           </div>
-          <div style="display:flex;justify-content:space-between;font-size:8pt;font-family:monospace;">
-            <span>REÇU LE: ${formatDateFR(item.receivedDate)}</span><span>${item.lot}</span>
+          <div style="display:flex;justify-content:space-between;font-size:${compact ? '6.5pt' : '7.5pt'};font-family:monospace;">
+            <span>REÇU: ${formatDateFR(item.receivedDate)}</span><span>${item.lot}</span>
           </div>
-          <div style="text-align:center;margin-top:3px;">
-            <div class="barcode">${item.barcode || '3250390000'}</div>
-          </div>
+          ${compact ? '' : `<div style="text-align:center;margin-top:2px;"><div class="barcode">${item.barcode || '3250390000'}</div></div>`}
         </div>
       `;
     }
@@ -788,11 +833,7 @@
       currentHistoryFilter = filter;
       ['all', 'expired', 'short', 'valid'].forEach(f => {
         const btn = document.getElementById('filter-' + f);
-        if (f === filter) {
-          btn.className = 'py-1.5 rounded-lg bg-cyan-500 text-slate-950';
-        } else {
-          btn.className = 'py-1.5 rounded-lg text-slate-400';
-        }
+        btn.className = (f === filter) ? 'py-1.5 rounded-lg bg-cyan-500 text-slate-950' : 'py-1.5 rounded-lg text-slate-400';
       });
       renderHistory();
     }
@@ -823,8 +864,7 @@
         if (currentHistoryFilter === 'short' && (diff < 0 || diff > 7)) return false;
         if (currentHistoryFilter === 'valid' && diff <= 7) return false;
         if (query) {
-          const hay = `${item.name} ${item.lot} ${item.blNumber}`.toLowerCase();
-          return hay.includes(query);
+          return `${item.name} ${item.lot} ${item.blNumber}`.toLowerCase().includes(query);
         }
         return true;
       });
@@ -863,17 +903,16 @@
               </div>
             </div>
 
-            <!-- Barre d'infos SANS modificateur de quantité -->
             <div class="flex items-center justify-between text-xs bg-slate-950/90 px-3 py-2 rounded-xl border border-slate-800/80">
               <span class="text-slate-400">Reçu: <strong class="mono text-white">${formatDateFR(item.receivedDate)}</strong></span>
               <span class="mono font-bold text-cyan-400">${item.lot}</span>
             </div>
 
             <div class="grid grid-cols-2 gap-2 pt-0.5">
-              <button onclick="printSingleHistoryLabel('${item.id}')" class="py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/50 text-cyan-200 font-bold text-xs">
+              <button type="button" onclick="printSingleHistoryLabel('${item.id}')" class="py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/50 text-cyan-200 font-bold text-xs">
                 🖨️ Sortir l'étiquette
               </button>
-              <button onclick="toggleItemSortie('${item.id}')" class="py-2 rounded-xl ${inSortie ? 'bg-rose-600 text-white' : 'bg-slate-800 text-rose-300 border border-rose-500/30'} font-bold text-xs">
+              <button type="button" onclick="toggleItemSortie('${item.id}')" class="py-2 rounded-xl ${inSortie ? 'bg-rose-600 text-white' : 'bg-slate-800 text-rose-300 border border-rose-500/30'} font-bold text-xs">
                 ${inSortie ? '↩️ Retirer de la sortie' : '📤 Sortir date passée'}
               </button>
             </div>
@@ -924,8 +963,8 @@
             <div class="text-[10px] mono text-rose-400">DLC: ${formatDateFR(item.dlc)} • ${item.lot}</div>
           </div>
           <div class="flex gap-1">
-            <button onclick="toggleItemSortie('${item.id}')" title="Remettre dans l'historique" class="px-2 py-1 rounded bg-slate-800 text-[10px]">↩️</button>
-            <button onclick="purgeHistoryItem('${item.id}')" title="Supprimer définitivement" class="px-2 py-1 rounded bg-rose-600/30 text-rose-300 text-[10px]">🗑️</button>
+            <button type="button" onclick="toggleItemSortie('${item.id}')" class="px-2 py-1 rounded bg-slate-800 text-[10px]">↩️</button>
+            <button type="button" onclick="purgeHistoryItem('${item.id}')" class="px-2 py-1 rounded bg-rose-600/30 text-rose-300 text-[10px]">🗑️</button>
           </div>
         </div>
       `).join('');
@@ -941,12 +980,13 @@
     function printSortieTicket() {
       const items = appState.historyItems.filter(x => appState.sortieIds.includes(x.id));
       if (items.length === 0) return;
+      const { w } = getRollDimensions();
       const printArea = document.getElementById('realPrintArea');
       printArea.innerHTML = `
-        <div class="print-label-sheet">
-          <div style="font-weight:900;font-size:11pt;border-bottom:2px solid #000;margin-bottom:4px;">BORDEREAU RETRAIT DLC</div>
-          <div style="font-size:8pt;margin-bottom:6px;">Édité le ${new Date().toLocaleDateString('fr-FR')} (${terminalId})</div>
-          ${items.map(i => `<div style="font-size:9pt;border-bottom:1px dashed #999;padding:2px 0;"><b>${i.name}</b><br/>DLC: ${formatDateFR(i.dlc)} | ${i.lot}</div>`).join('')}
+        <div class="print-label-sheet" style="width:${w}mm;">
+          <div style="font-weight:900;font-size:10pt;border-bottom:2px solid #000;margin-bottom:4px;">BORDEREAU RETRAIT DLC</div>
+          <div style="font-size:8pt;margin-bottom:6px;">Édité le ${new Date().toLocaleDateString('fr-FR')}</div>
+          ${items.map(i => `<div style="font-size:8.5pt;border-bottom:1px dashed #999;padding:2px 0;"><b>${i.name}</b><br/>DLC: ${formatDateFR(i.dlc)} | ${i.lot}</div>`).join('')}
         </div>
       `;
       window.print();
@@ -1011,23 +1051,11 @@
       if (mode === 'UNIVERSAL') {
         uBtn.className = 'p-3 rounded-xl border border-cyan-400 bg-cyan-500/15 text-left';
         bBtn.className = 'p-3 rounded-xl border border-slate-800 bg-slate-950 text-left opacity-70';
-        document.getElementById('printerBadgeTop').textContent = 'UNIVERSEL-PDF';
         document.getElementById('statusPrinterEngine').textContent = 'SYSTÈME ANDROID / PDF';
       } else {
         bBtn.className = 'p-3 rounded-xl border border-cyan-400 bg-cyan-500/15 text-left';
         uBtn.className = 'p-3 rounded-xl border border-slate-800 bg-slate-950 text-left opacity-70';
-        document.getElementById('printerBadgeTop').textContent = 'BT-DIRECT';
         document.getElementById('statusPrinterEngine').textContent = 'BLUETOOTH SPP/BLE';
-      }
-    }
-
-    function saveTerminalName() {
-      const val = document.getElementById('terminalNameInput').value.trim().toUpperCase();
-      if (val) {
-        terminalId = val;
-        localStorage.setItem('scanbl_terminal_id', val);
-        document.getElementById('terminalIdBadge').textContent = val;
-        showToast('Terminal renommé : ' + val);
       }
     }
 
