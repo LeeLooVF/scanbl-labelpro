@@ -1,0 +1,11 @@
+{
+  "appId": "com.scanbl.labelpro",
+  "appName": "ScanBL LabelPro",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://scanbl-labelpro.pages.dev/",
+    "cleartext": true,
+    "androidScheme": "https"
+  }
+}
