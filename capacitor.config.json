@@ -1,6 +1,6 @@
 {
-  "appId": "com.scanbl.labelpro",
-  "appName": "ScanBL LabelPro",
+  "appId": "com.optistock.pro",
+  "appName": "OptiStock Pro",
   "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
