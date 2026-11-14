@@ -1,90 +1,62 @@
-name: Build Android APK (ScanBL LabelPro)
+// functions/state.js
+const DEFAULT_STATE = {
+  verifyItems: [],
+  historyItems: [],
+  sortieIds: [],
+  kitchenProducts: [],
+  kitchenCart: {},
+  updatedAt: new Date().toISOString()
+};
 
-on:
-  push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
+export async function onRequestGet(context) {
+  const { env } = context;
+  try {
+    if (!env.SCANBL_KV) {
+      return new Response(JSON.stringify({ error: "Binding SCANBL_KV manquant" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    const raw = await env.SCANBL_KV.get("TEAM_STATE");
+    const state = raw ? { ...DEFAULT_STATE, ...JSON.parse(raw) } : DEFAULT_STATE;
 
-jobs:
-  build-apk:
-    runs-on: ubuntu-latest
+    return new Response(JSON.stringify(state), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate"
+      }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
+}
 
-    steps:
-      - name: 1. Récupération du code source
-        uses: actions/checkout@v4
+export async function onRequestPost(context) {
+  const { request, env } = context;
+  try {
+    if (!env.SCANBL_KV) {
+      return new Response(JSON.stringify({ error: "Binding SCANBL_KV manquant" }), { status: 500 });
+    }
+    const body = await request.json();
+    const rawOld = await env.SCANBL_KV.get("TEAM_STATE");
+    const oldState = rawOld ? JSON.parse(rawOld) : DEFAULT_STATE;
 
-      - name: 2. Installation de Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+    const newState = {
+      verifyItems: Array.isArray(body.verifyItems) ? body.verifyItems : (oldState.verifyItems || []),
+      historyItems: Array.isArray(body.historyItems) ? body.historyItems : (oldState.historyItems || []),
+      sortieIds: Array.isArray(body.sortieIds) ? body.sortieIds : (oldState.sortieIds || []),
+      kitchenProducts: Array.isArray(body.kitchenProducts) ? body.kitchenProducts : (oldState.kitchenProducts || []),
+      kitchenCart: (body.kitchenCart && typeof body.kitchenCart === "object") ? body.kitchenCart : (oldState.kitchenCart || {}),
+      updatedAt: new Date().toISOString()
+    };
 
-      - name: 3. Installation de Java JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: 4. Préparation du dossier web et installation Capacitor
-        run: |
-          mkdir -p www
-          cp index.html www/index.html
-          npm install
-
-      - name: 5. Génération et synchronisation du projet Android
-        run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-          npx cap sync android
-
-      - name: 6. Permissions accordées dès l'installation & Conservation du FileChooser Capacitor
-        run: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
-            sed -i '/<application/i \    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.BLUETOOTH" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />\n    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />' "$MANIFEST"
-          fi
-
-          # Règle targetSdkVersion à 22 pour que TOUTES les permissions soient accordées d'office à l'installation de l'APK
-          if [ -f "android/variables.gradle" ]; then
-            sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 22/g' android/variables.gradle
-          fi
-
-          # Demande aussi les permissions sans jamais écraser le BridgeWebChromeClient de Capacitor (répare Photo/Fichier et Appareil HD)
-          MAIN_ACT=$(find android/app/src/main/java -name "MainActivity.java" | head -n 1)
-          if [ -n "$MAIN_ACT" ]; then
-            cat << 'EOF' > "$MAIN_ACT"
-          package com.scanbl.labelpro;
-
-          import android.Manifest;
-          import android.os.Build;
-          import android.os.Bundle;
-          import androidx.core.app.ActivityCompat;
-          import com.getcapacitor.BridgeActivity;
-
-          public class MainActivity extends BridgeActivity {
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                      ActivityCompat.requestPermissions(this, new String[]{
-                          Manifest.permission.CAMERA,
-                          Manifest.permission.READ_EXTERNAL_STORAGE,
-                          Manifest.permission.WRITE_EXTERNAL_STORAGE
-                      }, 101);
-                  }
-              }
-          }
-          EOF
-          fi
-
-      - name: 7. Compilation de l'APK avec Gradle
-        working-directory: ./android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-      - name: 8. Publication de l'APK téléchargeable
-        uses: actions/upload-artifact@v4
-        with:
-          name: ScanBL-LabelPro-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+    await env.SCANBL_KV.put("TEAM_STATE", JSON.stringify(newState));
+    return new Response(JSON.stringify({ ok: true, state: newState }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
+}
