@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b1120" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>ScanBL LabelPro — Cloud Production</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Libre+Barcode+128&display=swap" rel="stylesheet">
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #090e1a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .barcode { font-family: 'Libre Barcode 128', cursive; font-size: 38px; line-height: 1; }
+    @keyframes laser {
+      0%, 100% { top: 12%; opacity: 0.85; }
+      50% { top: 86%; opacity: 1; }
+    }
+    .laser-line {
+      position: absolute;
+      left: 6%;
+      right: 6%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #06b6d4, #22d3ee, #06b6d4, transparent);
+      box-shadow: 0 0 12px #06b6d4, 0 0 24px #06b6d4;
+      animation: laser 2.6s ease-in-out infinite;
+      pointer-events: none;
+    }
+    /* Zone d'impression réelle (Spooler Android / PDF / RawBT) */
+    #realPrintArea { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      #appRoot { display: none !important; }
+      #realPrintArea, #realPrintArea * { visibility: visible; }
+      #realPrintArea {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: #ffffff;
+        color: #000000;
+      }
+      .print-label-sheet {
+        page-break-after: always;
+        break-after: page;
+        width: 50mm;
+        min-height: 30mm;
+        padding: 2mm 3mm;
+        border: 1px dashed #ccc;
+        margin: 0 auto 2mm auto;
+        font-family: 'Inter', sans-serif;
+        color: #000;
+        background: #fff;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-[#090e1a] text-slate-100 select-none">
+
+  <!-- Zone invisible dédiée au Spooler d'impression natif Android / PDF -->
+  <div id="realPrintArea"></div>
+
+  <!-- Application Principale -->
+  <div id="appRoot" class="max-w-md w-full mx-auto min-h-screen flex flex-col bg-[#0d1323] shadow-2xl relative pb-20">
+
+    <!-- Barre d'état supérieure -->
+    <div class="px-4 py-1.5 bg-[#070b14] flex items-center justify-between text-[11px] text-slate-400 border-b border-slate-800/80">
+      <div class="flex items-center gap-2">
+        <span id="clockDisplay" class="mono font-semibold text-slate-200">--:--</span>
+        <span id="printerBadgeTop" class="px-1.5 py-0.5 rounded bg-cyan-950/90 text-cyan-300 border border-cyan-700/50 text-[10px] font-bold">UNIVERSEL-PDF</span>
+        <span id="cloudStatusTop" class="px-1.5 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-700/50 text-[10px] font-bold flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> CLOUD LIVE
+        </span>
+      </div>
+      <div class="flex items-center gap-2 mono text-[10px]">
+        <span id="terminalIdBadge" class="text-slate-400">TERM-01</span>
+      </div>
+    </div>
+
+    <!-- Header Application -->
+    <header class="px-4 py-3 bg-[#0f172a]/90 backdrop-blur border-b border-slate-800 flex items-center justify-between sticky top-0 z-30">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/20">BL</div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <h1 class="font-extrabold text-sm tracking-tight text-white">ScanBL <span class="text-cyan-400">LabelPro</span></h1>
+            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">V2.5 PROD</span>
+          </div>
+          <p id="headerSubtitle" class="text-[11px] text-slate-400">Scanner IA & Étiquetage Cloud Partagé</p>
+        </div>
+      </div>
+
+      <!-- Bouton Tiroir Sorties DLC -->
+      <button onclick="toggleSortieDrawer(true)" class="px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5 text-xs font-semibold transition">
+        <span>📋 Sorties</span>
+        <span id="sortieCountBadge" class="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-bold">0</span>
+      </button>
+    </header>
+
+    <!-- Contenu Dynamique des Onglets -->
+    <main class="flex-1 p-3.5 space-y-3 overflow-y-auto">
+
+      <!-- ==================== ONGLET 1 : SCANNER CAMÉRA ==================== -->
+      <section id="tab-scanner" class="space-y-3">
+        <div class="relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 aspect-[3/4] flex flex-col justify-between shadow-inner">
+          <!-- Flux vidéo réel de la caméra arrière -->
+          <video id="cameraStream" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover hidden"></video>
+          <!-- Image capturée en aperçu -->
+          <img id="capturedPreview" alt="Aperçu BL" class="absolute inset-0 w-full h-full object-contain bg-slate-950 hidden" />
+
+          <!-- Fond par défaut si caméra non démarrée -->
+          <div id="cameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
+            <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-3xl mb-3">📷</div>
+            <p class="text-sm font-bold text-slate-200">Prêt à scanner votre Bon de Livraison</p>
+            <p class="text-xs text-slate-400 mt-1 max-w-xs">Activez la caméra en direct ou prenez une photo haute définition pour extraire les produits et DLC via Gemini Vision.</p>
+            <button onclick="startLiveCamera()" class="mt-4 px-4 py-2 rounded-xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-xs font-bold hover:bg-cyan-500/30">
+              Activer le viseur caméra direct
+            </button>
+          </div>
+
+          <!-- Repères de cadrage & ligne laser -->
+          <div class="laser-line"></div>
+          <div class="relative z-10 p-3 flex justify-between items-center bg-gradient-to-b from-black/70 to-transparent">
+            <span class="text-[11px] mono px-2 py-0.5 rounded bg-black/60 text-cyan-300 border border-cyan-500/30">GEMINI 2.5 FLASH • OCR</span>
+            <button onclick="syncFromCloud(true)" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-300 hover:text-white">
+              🔄 Sync Cloud
+            </button>
+          </div>
+
+          <!-- Overlay d'analyse IA en cours -->
+          <div id="scanLoadingOverlay" class="hidden absolute inset-0 z-20 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+            <div class="w-12 h-12 rounded-full border-4 border-cyan-400 border-t-transparent animate-spin mb-3"></div>
+            <p class="text-sm font-bold text-white">Transcription Gemini Vision en cours...</p>
+            <p id="scanLoadingSub" class="text-xs text-cyan-300 mt-1 mono">Envoi sécurisé vers /scan...</p>
+          </div>
+
+          <!-- Contrôles bas de caméra -->
+          <div class="relative z-10 p-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex items-center justify-around">
+            <!-- Import Galerie / Photo Native -->
+            <label class="cursor-pointer flex flex-col items-center gap-1 text-[11px] text-slate-300 hover:text-white">
+              <div class="w-11 h-11 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-lg">🖼️</div>
+              <span>Photo / Fichier</span>
+              <input id="fileInputGallery" type="file" accept="image/*" class="hidden" onchange="handleImageFile(event)" />
+            </label>
+
+            <!-- Bouton Déclencheur Principal -->
+            <button onclick="triggerCapture()" class="w-18 h-18 p-1.5 rounded-full border-4 border-cyan-400 bg-cyan-500/20 hover:scale-105 active:scale-95 transition flex items-center justify-center shadow-lg shadow-cyan-500/30">
+              <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-xs">
+                SCAN BL
+              </div>
+            </button>
+
+            <!-- Appareil Photo Natif Android Direct -->
+            <label class="cursor-pointer flex flex-col items-center gap-1 text-[11px] text-slate-300 hover:text-white">
+              <div class="w-11 h-11 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-lg">📸</div>
+              <span>Appareil HD</span>
+              <input id="fileInputCamera" type="file" accept="image/*" capture="environment" class="hidden" onchange="handleImageFile(event)" />
+            </label>
+          </div>
+        </div>
+
+        <canvas id="captureCanvas" class="hidden"></canvas>
+      </section>
+
+      <!-- ==================== ONGLET 2 : VÉRIFIER ==================== -->
+      <section id="tab-verifier" class="hidden space-y-3">
+        <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+          <div>
+            <p class="text-[11px] uppercase tracking-wider text-cyan-400 font-bold">File d'attente avant impression</p>
+            <h2 class="text-sm font-bold text-white"><span id="verifyTotalRefs">0</span> référence(s) • <span id="verifyTotalLabels" class="text-emerald-400">0</span> étiquette(s)</h2>
+          </div>
+          <div class="flex gap-1.5">
+            <button onclick="openItemModal()" class="px-2.5 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold">+ Ajouter</button>
+            <button onclick="clearVerifyList()" class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold">Vider</button>
+          </div>
+        </div>
+
+        <div id="verifyListContainer" class="space-y-2.5"></div>
+
+        <div id="verifyBottomAction" class="pt-2">
+          <button onclick="switchTab('etiquettes')" class="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-extrabold text-sm shadow-lg shadow-cyan-500/20">
+            Voir et Imprimer les Étiquettes →
+          </button>
+        </div>
+      </section>
+
+      <!-- ==================== ONGLET 3 : ÉTIQUETTES ==================== -->
+      <section id="tab-etiquettes" class="hidden space-y-3">
+        <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+          <div>
+            <p class="text-[11px] uppercase tracking-wider text-emerald-400 font-bold">Aperçu Thermique (50×30mm)</p>
+            <p class="text-xs text-slate-300">L'impression archive dans l'Historique et vide Vérifier</p>
+          </div>
+          <button onclick="printAllVerifyLabels()" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-md">
+            🖨️ Imprimer tout
+          </button>
+        </div>
+
+        <div id="labelsPreviewContainer" class="space-y-3"></div>
+      </section>
+
+      <!-- ==================== ONGLET 4 : HISTORIQUE ==================== -->
+      <section id="tab-historique" class="hidden space-y-3">
+        <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <p class="text-[10px] uppercase tracking-wider text-cyan-400 font-bold">Registre Cloud Partagé</p>
+              <h2 class="text-sm font-extrabold text-white"><span id="historyTotalCount">0</span> lots d'étiquettes générés</h2>
+            </div>
+            <button onclick="moveAllExpiredToSortie()" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/25 flex items-center gap-1.5">
+              <span>📤 Sortir les dates passées</span>
+            </button>
+          </div>
+
+          <!-- Recherche -->
+          <div class="relative">
+            <input id="historySearchInput" type="text" oninput="renderHistory()" placeholder="Rechercher un produit, n° de lot ou BL..." class="w-full pl-3 pr-8 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500" />
+            <button onclick="document.getElementById('historySearchInput').value=''; renderHistory();" class="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300 text-xs">✕</button>
+          </div>
+
+          <!-- Filtres DLC -->
+          <div class="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px] font-bold">
+            <button id="filter-all" onclick="setHistoryFilter('all')" class="py-1.5 rounded-lg bg-cyan-500 text-slate-950">Toutes (0)</button>
+            <button id="filter-expired" onclick="setHistoryFilter('expired')" class="py-1.5 rounded-lg text-slate-400">Passées (0)</button>
+            <button id="filter-short" onclick="setHistoryFilter('short')" class="py-1.5 rounded-lg text-slate-400">Courtes (0)</button>
+            <button id="filter-valid" onclick="setHistoryFilter('valid')" class="py-1.5 rounded-lg text-slate-400">Valides (0)</button>
+          </div>
+        </div>
+
+        <div id="historyListContainer" class="space-y-2.5"></div>
+      </section>
+
+      <!-- ==================== ONGLET 5 : RÉGLAGES ==================== -->
+      <section id="tab-reglages" class="hidden space-y-3">
+        <!-- Mode d'impression Universel vs Bluetooth Direct -->
+        <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+          <h3 class="text-xs font-extrabold uppercase tracking-wider text-cyan-400">Mode d'Impression & Matériel</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btnModeUniversal" onclick="setPrintMode('UNIVERSAL')" class="p-3 rounded-xl border text-left transition">
+              <div class="text-xs font-extrabold text-white">Mode Universel</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">PDF / Spooler Android / RawBT (Toutes imprimantes)</div>
+            </button>
+            <button id="btnModeBT" onclick="setPrintMode('BT')" class="p-3 rounded-xl border text-left transition">
+              <div class="text-xs font-extrabold text-white">Bluetooth Direct</div>
+              <div class="text-[10px] text-slate-400 mt-0.5">Zebra ZPL / Brother / Niimbot / ESC-POS</div>
+            </button>
+          </div>
+
+          <div class="pt-1">
+            <label class="text-[11px] text-slate-400 block mb-1">Nom du terminal (affiché aux collègues)</label>
+            <input id="terminalNameInput" type="text" onchange="saveTerminalName()" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white mono" />
+          </div>
+        </div>
+
+        <!-- Statut des services -->
+        <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-emerald-400">Statut des Services Cloud</h3>
+            <button onclick="testCloudHealth()" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold border border-slate-700">
+              Tester latence
+            </button>
+          </div>
+
+          <div class="space-y-2 text-xs">
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+              <span>API Gemini Vision (`/scan`)</span>
+              <span id="statusScanApi" class="mono text-[11px] text-emerald-400 font-bold">PRÊT • CLOUDFLARE</span>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+              <span>Base Cloud KV (`/state`)</span>
+              <span id="statusStateApi" class="mono text-[11px] text-emerald-400 font-bold">SYNCHRONISÉ</span>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+              <span>Spooler d'impression</span>
+              <span id="statusPrinterEngine" class="mono text-[11px] text-cyan-300 font-bold">SYSTÈME ANDROID / PDF</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Indication Version & Boutons d'actualisation -->
+        <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-400">Version de l'application</span>
+            <span class="mono font-bold text-slate-200">v2.5.0-prod (Cloudflare KV)</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-400">Dernière synchro Cloud</span>
+            <span id="lastSyncTimeDisplay" class="mono text-cyan-300">--:--:--</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button onclick="softRefreshUI()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-300">
+              🔄 Actualiser l'interface
+            </button>
+            <button onclick="hardForceRefresh()" class="py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-xs font-bold text-rose-300">
+              ⚡ Actualisation forcée
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Navigation Inférieure -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0b1120]/95 backdrop-blur border-t border-slate-800 grid grid-cols-5 py-1.5 z-30 text-[11px]">
+      <button onclick="switchTab('scanner')" id="nav-scanner" class="flex flex-col items-center py-1 text-cyan-400 font-bold">
+        <span class="text-base">📷</span><span>Scanner</span>
+      </button>
+      <button onclick="switchTab('verifier')" id="nav-verifier" class="relative flex flex-col items-center py-1 text-slate-400">
+        <span class="text-base">📋</span><span>Vérifier</span>
+        <span id="badgeVerifyNav" class="hidden absolute top-0.5 right-3 px-1.5 rounded-full bg-cyan-500 text-slate-950 text-[9px] font-extrabold">0</span>
+      </button>
+      <button onclick="switchTab('etiquettes')" id="nav-etiquettes" class="flex flex-col items-center py-1 text-slate-400">
+        <span class="text-base">🖨️</span><span>Étiquettes</span>
+      </button>
+      <button onclick="switchTab('historique')" id="nav-historique" class="flex flex-col items-center py-1 text-slate-400">
+        <span class="text-base">🕒</span><span>Historique</span>
+      </button>
+      <button onclick="switchTab('reglages')" id="nav-reglages" class="flex flex-col items-center py-1 text-slate-400">
+        <span class="text-base">⚙️</span><span>Réglages</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Modal Ajout / Édition d'article -->
+  <div id="itemModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 space-y-3">
+      <h3 id="modalTitle" class="text-sm font-extrabold text-white">Ajouter / Modifier une étiquette</h3>
+      <input type="hidden" id="modalItemId" />
+      <div>
+        <label class="text-[11px] text-slate-400">Désignation du produit</label>
+        <input id="modalName" type="text" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white" />
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[11px] text-slate-400">DLC / DLUO</label>
+          <input id="modalDlc" type="date" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white" />
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-400">Reçu le</label>
+          <input id="modalReceived" type="date" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[11px] text-slate-400">N° de Lot</label>
+          <input id="modalLot" type="text" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white mono" />
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-400">Qté d'étiquettes</label>
+          <input id="modalQty" type="number" min="1" value="1" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white mono" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeItemModal()" class="px-3 py-2 rounded-xl bg-slate-800 text-xs text-slate-300">Annuler</button>
+        <button onclick="saveItemModal()" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tiroir des Sorties DLC -->
+  <div id="sortieDrawer" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-end">
+    <div class="bg-slate-900 border-l border-slate-800 w-full max-w-sm h-full flex flex-col justify-between p-4">
+      <div class="space-y-3 overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 class="text-sm font-extrabold text-white">Liste de Retrait / Dates Passées</h3>
+            <p class="text-[11px] text-slate-400">Synchronisée sur tous les terminaux</p>
+          </div>
+          <button onclick="toggleSortieDrawer(false)" class="px-2.5 py-1 rounded-lg bg-slate-800 text-xs">Fermer</button>
+        </div>
+        <div id="sortieDrawerList" class="space-y-2"></div>
+      </div>
+      <div class="pt-3 border-t border-slate-800 space-y-2">
+        <button onclick="printSortieTicket()" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs">
+          🖨️ Imprimer le ticket de retrait DLC
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastBox" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-slate-900/95 border border-cyan-500/50 text-xs font-semibold text-white shadow-xl"></div>
+
+  <script>
+    // ==================== ÉTAT GLOBAL CLOUD ====================
+    let appState = {
+      verifyItems: [],
+      historyItems: [],
+      sortieIds: []
+    };
+    let currentHistoryFilter = 'all';
+    let printMode = localStorage.getItem('scanbl_print_mode') || 'UNIVERSAL';
+    let terminalId = localStorage.getItem('scanbl_terminal_id') || ('TERM-' + Math.floor(100 + Math.random() * 900));
+    localStorage.setItem('scanbl_terminal_id', terminalId);
+
+    let mediaStream = null;
+
+    // ==================== INITIALISATION ====================
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('terminalIdBadge').textContent = terminalId;
+      document.getElementById('terminalNameInput').value = terminalId;
+      updateClock();
+      setInterval(updateClock, 15000);
+      setPrintMode(printMode);
+      syncFromCloud(false);
+      // Synchro Cloud automatique toutes les 8 secondes
+      setInterval(() => syncFromCloud(false), 8000);
+    });
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clockDisplay').textContent = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function showToast(msg) {
+      const box = document.getElementById('toastBox');
+      box.textContent = msg;
+      box.classList.remove('hidden');
+      setTimeout(() => box.classList.add('hidden'), 2800);
+    }
+
+    // ==================== SYNCHRONISATION CLOUD (/state) ====================
+    async function syncFromCloud(manual = false) {
+      try {
+        const res = await fetch('/state', { method: 'GET', headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        appState.verifyItems = Array.isArray(data.verifyItems) ? data.verifyItems : [];
+        appState.historyItems = Array.isArray(data.historyItems) ? data.historyItems : [];
+        appState.sortieIds = Array.isArray(data.sortieIds) ? data.sortieIds : [];
+        document.getElementById('lastSyncTimeDisplay').textContent = new Date().toLocaleTimeString('fr-FR');
+        document.getElementById('statusStateApi').textContent = 'EN LIGNE • KV SYNC';
+        renderAll();
+        if (manual) showToast('☁️ Données Cloud synchronisées');
+      } catch (err) {
+        document.getElementById('statusStateApi').textContent = 'MODE HORS-LIGNE TEMP.';
+      }
+    }
+
+    async function pushToCloud() {
+      renderAll();
+      try {
+        await fetch('/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            verifyItems: appState.verifyItems,
+            historyItems: appState.historyItems,
+            sortieIds: appState.sortieIds,
+            terminalId: terminalId
+          })
+        });
+        document.getElementById('lastSyncTimeDisplay').textContent = new Date().toLocaleTimeString('fr-FR');
+      } catch (e) {
+        showToast('⚠️ Erreur d\'enregistrement Cloud');
+      }
+    }
+
+    // ==================== CAMÉRA & SCAN GEMINI (/scan) ====================
+    async function startLiveCamera() {
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false
+        });
+        const video = document.getElementById('cameraStream');
+        video.srcObject = mediaStream;
+        video.classList.remove('hidden');
+        document.getElementById('cameraPlaceholder').classList.add('hidden');
+        document.getElementById('capturedPreview').classList.add('hidden');
+      } catch (err) {
+        // Repli immédiat sur l'appareil photo natif Android
+        document.getElementById('fileInputCamera').click();
+      }
+    }
+
+    function triggerCapture() {
+      const video = document.getElementById('cameraStream');
+      if (mediaStream && !video.classList.contains('hidden')) {
+        const canvas = document.getElementById('captureCanvas');
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 960;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        sendImageToGemini(dataUrl);
+      } else {
+        document.getElementById('fileInputCamera').click();
+      }
+    }
+
+    function handleImageFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.getElementById('captureCanvas');
+          const maxDim = 1600;
+          let w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) { h = Math.round(h * (maxDim / w)); w = maxDim; }
+            else { w = Math.round(w * (maxDim / h)); h = maxDim; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          const preview = document.getElementById('capturedPreview');
+          preview.src = compressedDataUrl;
+          preview.classList.remove('hidden');
+          document.getElementById('cameraPlaceholder').classList.add('hidden');
+          sendImageToGemini(compressedDataUrl);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function sendImageToGemini(dataUrl) {
+      const overlay = document.getElementById('scanLoadingOverlay');
+      overlay.classList.remove('hidden');
+      try {
+        const res = await fetch('/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: dataUrl, mimeType: 'image/jpeg' })
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || 'Erreur de transcription');
+
+        const today = new Date().toISOString().split('T')[0];
+        const blNumber = data.blNumber || ('BL-' + Math.floor(10000 + Math.random() * 89999));
+        const receivedDate = data.receivedDate || today;
+        const items = Array.isArray(data.items) ? data.items : [];
+
+        if (items.length === 0) {
+          showToast('⚠️ Aucun produit détecté sur la photo');
+          overlay.classList.add('hidden');
+          return;
+        }
+
+        items.forEach((it, idx) => {
+          appState.verifyItems.push({
+            id: 'V-' + Date.now() + '-' + idx,
+            name: it.name || 'Article sans nom',
+            dlc: it.dlc || today,
+            receivedDate: receivedDate,
+            lot: it.lot || ('LOT-' + Math.floor(100 + Math.random() * 899)),
+            barcode: it.barcode || '3250390000000',
+            blNumber: blNumber,
+            qty: 1 // Toujours réglé sur 1 par défaut
+          });
+        });
+
+        await pushToCloud();
+        overlay.classList.add('hidden');
+        showToast(`✅ ${items.length} produit(s) extraits du BL`);
+        switchTab('verifier');
+      } catch (err) {
+        overlay.classList.add('hidden');
+        showToast('❌ ' + err.message);
+      }
+    }
+
+    // ==================== NAVIGATION & RENDU ====================
+    function switchTab(tab) {
+      ['scanner', 'verifier', 'etiquettes', 'historique', 'reglages'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('hidden', t !== tab);
+        const navBtn = document.getElementById('nav-' + t);
+        if (t === tab) {
+          navBtn.classList.add('text-cyan-400', 'font-bold');
+          navBtn.classList.remove('text-slate-400');
+        } else {
+          navBtn.classList.remove('text-cyan-400', 'font-bold');
+          navBtn.classList.add('text-slate-400');
+        }
+      });
+      renderAll();
+    }
+
+    function formatDateFR(isoDate) {
+      if (!isoDate) return '--/--/----';
+      const parts = isoDate.split('-');
+      return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : isoDate;
+    }
+
+    function getDaysDiff(dlcIso) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const target = new Date(dlcIso);
+      target.setHours(0, 0, 0, 0);
+      return Math.round((target - today) / (1000 * 60 * 60 * 24));
+    }
+
+    function renderAll() {
+      renderVerify();
+      renderLabelsPreview();
+      renderHistory();
+      renderSortieDrawer();
+    }
+
+    // ==================== RENDU VÉRIFIER ====================
+    function renderVerify() {
+      const container = document.getElementById('verifyListContainer');
+      const totalRefs = appState.verifyItems.length;
+      const totalLabels = appState.verifyItems.reduce((sum, i) => sum + (parseInt(i.qty) || 1), 0);
+
+      document.getElementById('verifyTotalRefs').textContent = totalRefs;
+      document.getElementById('verifyTotalLabels').textContent = totalLabels;
+
+      const navBadge = document.getElementById('badgeVerifyNav');
+      if (totalRefs > 0) {
+        navBadge.textContent = totalRefs;
+        navBadge.classList.remove('hidden');
+      } else {
+        navBadge.classList.add('hidden');
+      }
+
+      document.getElementById('verifyBottomAction').classList.toggle('hidden', totalRefs === 0);
+
+      if (totalRefs === 0) {
+        container.innerHTML = `
+          <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
+            <div class="text-3xl">✅</div>
+            <p class="text-sm font-bold text-white">Aucun article en attente de vérification</p>
+            <p class="text-xs text-slate-400">Scannez un nouveau bon de livraison pour générer vos étiquettes.</p>
+            <button onclick="switchTab('scanner')" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">
+              Scanner un BL
+            </button>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = appState.verifyItems.map(item => `
+        <div class="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span class="text-[10px] mono text-slate-400">${item.blNumber || 'BL'} • ${item.lot}</span>
+              <h4 class="text-sm font-bold text-white">${item.name}</h4>
+            </div>
+            <div class="text-right bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+              <div class="text-[9px] text-slate-400 uppercase">DLC / DLUO</div>
+              <div class="text-xs font-extrabold text-amber-400 mono">${formatDateFR(item.dlc)}</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-slate-300 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800/80">
+            <span>Reçu le : <strong class="mono text-white">${formatDateFR(item.receivedDate)}</strong></span>
+            <div class="flex items-center gap-2">
+              <button onclick="changeVerifyQty('${item.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-800 font-bold">-</button>
+              <span class="mono font-bold text-cyan-300">${item.qty} étiq.</span>
+              <button onclick="changeVerifyQty('${item.id}', 1)" class="w-7 h-7 rounded-lg bg-slate-800 font-bold">+</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button onclick="openItemModal('${item.id}')" class="py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+              ✏️ Éditer
+            </button>
+            <button onclick="deleteVerifyItem('${item.id}')" class="py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-semibold text-rose-300">
+              🗑️ Supprimer l'étiquette
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function changeVerifyQty(id, delta) {
+      const it = appState.verifyItems.find(x => x.id === id);
+      if (!it) return;
+      it.qty = Math.max(1, (parseInt(it.qty) || 1) + delta);
+      pushToCloud();
+    }
+
+    function deleteVerifyItem(id) {
+      appState.verifyItems = appState.verifyItems.filter(x => x.id !== id);
+      pushToCloud();
+      showToast('🗑️ Étiquette supprimée');
+    }
+
+    function clearVerifyList() {
+      appState.verifyItems = [];
+      pushToCloud();
+    }
+
+    // ==================== RENDU ÉTIQUETTES & IMPRESSION ====================
+    function renderLabelsPreview() {
+      const container = document.getElementById('labelsPreviewContainer');
+      if (appState.verifyItems.length === 0) {
+        container.innerHTML = `<div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-400">Aucune étiquette en attente d'impression.</div>`;
+        return;
+      }
+      container.innerHTML = appState.verifyItems.map(item => `
+        <div class="bg-white text-slate-950 rounded-xl p-3.5 shadow-lg border-2 border-slate-300 max-w-xs mx-auto space-y-1.5">
+          <div class="flex justify-between items-start border-b border-slate-300 pb-1">
+            <span class="font-black text-xs uppercase leading-tight">${item.name}</span>
+            <span class="mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white">x${item.qty}</span>
+          </div>
+          <div class="flex justify-between items-center bg-slate-100 px-2 py-1 rounded">
+            <span class="text-[10px] font-bold uppercase">DLC / DLUO :</span>
+            <span class="mono text-sm font-black">${formatDateFR(item.dlc)}</span>
+          </div>
+          <div class="flex justify-between text-[10px] mono font-semibold text-slate-700">
+            <span>REÇU LE : ${formatDateFR(item.receivedDate)}</span>
+            <span>${item.lot}</span>
+          </div>
+          <div class="text-center pt-1">
+            <div class="barcode">${item.barcode || '3250390000'}</div>
+            <div class="mono text-[9px] text-slate-500">${item.blNumber || ''}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function printAllVerifyLabels() {
+      if (appState.verifyItems.length === 0) {
+        showToast('Aucune étiquette à imprimer');
+        return;
+      }
+
+      // Construction des étiquettes pour le spooler d'impression Android / PDF
+      const printArea = document.getElementById('realPrintArea');
+      let html = '';
+      appState.verifyItems.forEach(item => {
+        const count = Math.max(1, parseInt(item.qty) || 1);
+        for (let i = 0; i < count; i++) {
+          html += buildPrintableLabelHTML(item);
+        }
+      });
+      printArea.innerHTML = html;
+
+      // Archivage dans l'historique partagé et vidage immédiat de VÉRIFIER
+      appState.verifyItems.forEach(item => {
+        appState.historyItems.unshift({
+          ...item,
+          id: 'H-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          printedAt: new Date().toISOString()
+        });
+      });
+      appState.verifyItems = [];
+      await pushToCloud();
+
+      window.print();
+      showToast('🖨️ Impression lancée • Vérifier a été vidé');
+      switchTab('historique');
+    }
+
+    function printSingleHistoryLabel(id) {
+      const item = appState.historyItems.find(x => x.id === id);
+      if (!item) return;
+      const printArea = document.getElementById('realPrintArea');
+      printArea.innerHTML = buildPrintableLabelHTML(item);
+      window.print();
+    }
+
+    function buildPrintableLabelHTML(item) {
+      return `
+        <div class="print-label-sheet">
+          <div style="font-weight:900;font-size:11pt;border-bottom:1px solid #000;padding-bottom:2px;margin-bottom:3px;">${item.name}</div>
+          <div style="display:flex;justify-content:space-between;font-size:10pt;font-weight:800;margin-bottom:2px;">
+            <span>DLC/DLUO:</span><span>${formatDateFR(item.dlc)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:8pt;font-family:monospace;">
+            <span>REÇU LE: ${formatDateFR(item.receivedDate)}</span><span>${item.lot}</span>
+          </div>
+          <div style="text-align:center;margin-top:3px;">
+            <div class="barcode">${item.barcode || '3250390000'}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==================== HISTORIQUE & SORTIES DATES PASSÉES ====================
+    function setHistoryFilter(filter) {
+      currentHistoryFilter = filter;
+      ['all', 'expired', 'short', 'valid'].forEach(f => {
+        const btn = document.getElementById('filter-' + f);
+        if (f === filter) {
+          btn.className = 'py-1.5 rounded-lg bg-cyan-500 text-slate-950';
+        } else {
+          btn.className = 'py-1.5 rounded-lg text-slate-400';
+        }
+      });
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const container = document.getElementById('historyListContainer');
+      const query = (document.getElementById('historySearchInput')?.value || '').toLowerCase().trim();
+
+      let countAll = appState.historyItems.length;
+      let countExpired = 0, countShort = 0, countValid = 0;
+
+      appState.historyItems.forEach(item => {
+        const diff = getDaysDiff(item.dlc);
+        if (diff < 0) countExpired++;
+        else if (diff <= 7) countShort++;
+        else countValid++;
+      });
+
+      document.getElementById('historyTotalCount').textContent = countAll;
+      document.getElementById('filter-all').textContent = `Toutes (${countAll})`;
+      document.getElementById('filter-expired').textContent = `Passées (${countExpired})`;
+      document.getElementById('filter-short').textContent = `Courtes (${countShort})`;
+      document.getElementById('filter-valid').textContent = `Valides (${countValid})`;
+
+      const filtered = appState.historyItems.filter(item => {
+        const diff = getDaysDiff(item.dlc);
+        if (currentHistoryFilter === 'expired' && diff >= 0) return false;
+        if (currentHistoryFilter === 'short' && (diff < 0 || diff > 7)) return false;
+        if (currentHistoryFilter === 'valid' && diff <= 7) return false;
+        if (query) {
+          const hay = `${item.name} ${item.lot} ${item.blNumber}`.toLowerCase();
+          return hay.includes(query);
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-400">Aucune étiquette dans cette catégorie.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const diff = getDaysDiff(item.dlc);
+        const inSortie = appState.sortieIds.includes(item.id);
+        let statusBadge = '';
+        if (diff < 0) {
+          statusBadge = `<span class="px-2 py-0.5 rounded-md bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10px] font-bold">DATE PASSÉE (${diff}j)</span>`;
+        } else if (diff <= 7) {
+          statusBadge = `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">DATE COURTE (J-${diff})</span>`;
+        } else {
+          statusBadge = `<span class="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold">VALIDE (+${diff}j)</span>`;
+        }
+
+        return `
+          <div class="p-3.5 rounded-2xl bg-slate-900 border ${inSortie ? 'border-rose-500/60' : 'border-slate-800'} space-y-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div class="space-y-1">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  ${statusBadge}
+                  <span class="text-[10px] mono text-slate-400">${item.blNumber || ''}</span>
+                  ${inSortie ? '<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[9px] font-bold">DANS LISTE SORTIE</span>' : ''}
+                </div>
+                <h4 class="text-sm font-bold text-white pt-0.5">${item.name}</h4>
+              </div>
+              <div class="text-right bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+                <div class="text-[9px] text-slate-400 uppercase">DLC / DLUO</div>
+                <div class="text-xs font-extrabold ${diff < 0 ? 'text-rose-400' : 'text-cyan-300'} mono">${formatDateFR(item.dlc)}</div>
+              </div>
+            </div>
+
+            <!-- Barre d'infos SANS modificateur de quantité -->
+            <div class="flex items-center justify-between text-xs bg-slate-950/90 px-3 py-2 rounded-xl border border-slate-800/80">
+              <span class="text-slate-400">Reçu: <strong class="mono text-white">${formatDateFR(item.receivedDate)}</strong></span>
+              <span class="mono font-bold text-cyan-400">${item.lot}</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-0.5">
+              <button onclick="printSingleHistoryLabel('${item.id}')" class="py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/50 text-cyan-200 font-bold text-xs">
+                🖨️ Sortir l'étiquette
+              </button>
+              <button onclick="toggleItemSortie('${item.id}')" class="py-2 rounded-xl ${inSortie ? 'bg-rose-600 text-white' : 'bg-slate-800 text-rose-300 border border-rose-500/30'} font-bold text-xs">
+                ${inSortie ? '↩️ Retirer de la sortie' : '📤 Sortir date passée'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleItemSortie(id) {
+      if (appState.sortieIds.includes(id)) {
+        appState.sortieIds = appState.sortieIds.filter(x => x !== id);
+      } else {
+        appState.sortieIds.push(id);
+      }
+      pushToCloud();
+    }
+
+    function moveAllExpiredToSortie() {
+      let added = 0;
+      appState.historyItems.forEach(item => {
+        if (getDaysDiff(item.dlc) < 0 && !appState.sortieIds.includes(item.id)) {
+          appState.sortieIds.push(item.id);
+          added++;
+        }
+      });
+      pushToCloud();
+      toggleSortieDrawer(true);
+      showToast(`📤 ${added} produit(s) périmé(s) ajoutés aux sorties`);
+    }
+
+    function toggleSortieDrawer(open) {
+      document.getElementById('sortieDrawer').classList.toggle('hidden', !open);
+      renderSortieDrawer();
+    }
+
+    function renderSortieDrawer() {
+      document.getElementById('sortieCountBadge').textContent = appState.sortieIds.length;
+      const list = document.getElementById('sortieDrawerList');
+      const items = appState.historyItems.filter(x => appState.sortieIds.includes(x.id));
+      if (items.length === 0) {
+        list.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Aucun produit dans la liste de retrait.</p>`;
+        return;
+      }
+      list.innerHTML = items.map(item => `
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
+          <div>
+            <div class="text-xs font-bold text-white">${item.name}</div>
+            <div class="text-[10px] mono text-rose-400">DLC: ${formatDateFR(item.dlc)} • ${item.lot}</div>
+          </div>
+          <div class="flex gap-1">
+            <button onclick="toggleItemSortie('${item.id}')" title="Remettre dans l'historique" class="px-2 py-1 rounded bg-slate-800 text-[10px]">↩️</button>
+            <button onclick="purgeHistoryItem('${item.id}')" title="Supprimer définitivement" class="px-2 py-1 rounded bg-rose-600/30 text-rose-300 text-[10px]">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function purgeHistoryItem(id) {
+      appState.historyItems = appState.historyItems.filter(x => x.id !== id);
+      appState.sortieIds = appState.sortieIds.filter(x => x !== id);
+      pushToCloud();
+      showToast('🗑️ Produit retiré définitivement');
+    }
+
+    function printSortieTicket() {
+      const items = appState.historyItems.filter(x => appState.sortieIds.includes(x.id));
+      if (items.length === 0) return;
+      const printArea = document.getElementById('realPrintArea');
+      printArea.innerHTML = `
+        <div class="print-label-sheet">
+          <div style="font-weight:900;font-size:11pt;border-bottom:2px solid #000;margin-bottom:4px;">BORDEREAU RETRAIT DLC</div>
+          <div style="font-size:8pt;margin-bottom:6px;">Édité le ${new Date().toLocaleDateString('fr-FR')} (${terminalId})</div>
+          ${items.map(i => `<div style="font-size:9pt;border-bottom:1px dashed #999;padding:2px 0;"><b>${i.name}</b><br/>DLC: ${formatDateFR(i.dlc)} | ${i.lot}</div>`).join('')}
+        </div>
+      `;
+      window.print();
+    }
+
+    // ==================== MODAL AJOUT / ÉDITION ====================
+    function openItemModal(id = null) {
+      const today = new Date().toISOString().split('T')[0];
+      if (id) {
+        const it = appState.verifyItems.find(x => x.id === id);
+        if (!it) return;
+        document.getElementById('modalItemId').value = it.id;
+        document.getElementById('modalName').value = it.name;
+        document.getElementById('modalDlc').value = it.dlc;
+        document.getElementById('modalReceived').value = it.receivedDate || today;
+        document.getElementById('modalLot').value = it.lot;
+        document.getElementById('modalQty').value = it.qty || 1;
+      } else {
+        document.getElementById('modalItemId').value = '';
+        document.getElementById('modalName').value = '';
+        document.getElementById('modalDlc').value = today;
+        document.getElementById('modalReceived').value = today;
+        document.getElementById('modalLot').value = 'LOT-' + Math.floor(100 + Math.random() * 899);
+        document.getElementById('modalQty').value = 1;
+      }
+      document.getElementById('itemModal').classList.remove('hidden');
+    }
+
+    function closeItemModal() {
+      document.getElementById('itemModal').classList.add('hidden');
+    }
+
+    function saveItemModal() {
+      const id = document.getElementById('modalItemId').value;
+      const name = document.getElementById('modalName').value.trim() || 'Article';
+      const dlc = document.getElementById('modalDlc').value;
+      const receivedDate = document.getElementById('modalReceived').value;
+      const lot = document.getElementById('modalLot').value.trim() || 'LOT-001';
+      const qty = Math.max(1, parseInt(document.getElementById('modalQty').value) || 1);
+
+      if (id) {
+        const it = appState.verifyItems.find(x => x.id === id);
+        if (it) Object.assign(it, { name, dlc, receivedDate, lot, qty });
+      } else {
+        appState.verifyItems.push({
+          id: 'V-' + Date.now(),
+          name, dlc, receivedDate, lot, qty,
+          barcode: '3250390000000',
+          blNumber: 'MANUEL'
+        });
+      }
+      closeItemModal();
+      pushToCloud();
+    }
+
+    // ==================== RÉGLAGES & MAINTENANCE ====================
+    function setPrintMode(mode) {
+      printMode = mode;
+      localStorage.setItem('scanbl_print_mode', mode);
+      const uBtn = document.getElementById('btnModeUniversal');
+      const bBtn = document.getElementById('btnModeBT');
+      if (mode === 'UNIVERSAL') {
+        uBtn.className = 'p-3 rounded-xl border border-cyan-400 bg-cyan-500/15 text-left';
+        bBtn.className = 'p-3 rounded-xl border border-slate-800 bg-slate-950 text-left opacity-70';
+        document.getElementById('printerBadgeTop').textContent = 'UNIVERSEL-PDF';
+        document.getElementById('statusPrinterEngine').textContent = 'SYSTÈME ANDROID / PDF';
+      } else {
+        bBtn.className = 'p-3 rounded-xl border border-cyan-400 bg-cyan-500/15 text-left';
+        uBtn.className = 'p-3 rounded-xl border border-slate-800 bg-slate-950 text-left opacity-70';
+        document.getElementById('printerBadgeTop').textContent = 'BT-DIRECT';
+        document.getElementById('statusPrinterEngine').textContent = 'BLUETOOTH SPP/BLE';
+      }
+    }
+
+    function saveTerminalName() {
+      const val = document.getElementById('terminalNameInput').value.trim().toUpperCase();
+      if (val) {
+        terminalId = val;
+        localStorage.setItem('scanbl_terminal_id', val);
+        document.getElementById('terminalIdBadge').textContent = val;
+        showToast('Terminal renommé : ' + val);
+      }
+    }
+
+    async function testCloudHealth() {
+      const start = performance.now();
+      await syncFromCloud(false);
+      const ms = Math.round(performance.now() - start);
+      document.getElementById('statusStateApi').textContent = `EN LIGNE (${ms} ms)`;
+      showToast(`⚡ Latence Cloud KV : ${ms} ms`);
+    }
+
+    function softRefreshUI() {
+      syncFromCloud(true);
+    }
+
+    async function hardForceRefresh() {
+      showToast('⚡ Purge du cache et rechargement forcé...');
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map(n => caches.delete(n)));
+      }
+      setTimeout(() => window.location.reload(true), 600);
+    }
+  </script>
+</body>
+</html>
