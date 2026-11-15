@@ -40,12 +40,12 @@ jobs:
           fi
           npx cap sync android
 
-      - name: 6. Génération et application de l'icône officielle OptiStock Pro
+      - name: 6. Application de l'icône et des permissions Android
         run: |
           sudo apt-get update && sudo apt-get install -y imagemagick
           if [ ! -f "icon.png" ]; then
             cat << 'EOF' > icon.svg
-          <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="512" height="512" viewBox="0 0 512 512">
+          <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
             <defs>
               <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0%" stop-color="#090d16"/>
@@ -82,8 +82,6 @@ jobs:
             fi
           done
 
-      - name: 7. Permissions demandées UNE SEULE FOIS au premier démarrage
-        run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
             sed -i '/<application/i \    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.BLUETOOTH" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />' "$MANIFEST"
@@ -93,7 +91,6 @@ jobs:
             sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 34/g' android/variables.gradle
           fi
 
-          # Ne demande les permissions qu'UNE SEULE FOIS au tout premier lancement (mémorisé dans SharedPreferences)
           MAIN_ACT=$(find android/app/src/main/java -name "MainActivity.java" | head -n 1)
           if [ -n "$MAIN_ACT" ]; then
             PKG_LINE=$(head -n 1 "$MAIN_ACT")
@@ -144,9 +141,13 @@ jobs:
           EOF
           fi
 
+      - name: 7. Configuration du SDK Android et acceptation des licences
+        uses: android-actions/setup-android@v3
+
       - name: 8. Compilation de l'APK OptiStock Pro
         working-directory: ./android
         run: |
+          yes | sdkmanager --licenses || true
           chmod +x gradlew
           ./gradlew assembleDebug
           cp app/build/outputs/apk/debug/app-debug.apk ../OptiStock-Pro.apk
