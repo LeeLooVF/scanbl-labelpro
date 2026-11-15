@@ -75,12 +75,21 @@
         box-sizing: border-box;
         overflow: hidden;
       }
+      .print-order-a4 {
+        width: 100%;
+        max-width: 190mm;
+        margin: 0 auto;
+        padding: 8mm;
+        font-family: 'Inter', sans-serif;
+        color: #000;
+        background: #fff;
+      }
     }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between bg-[#090d16] text-slate-100 select-none">
 
-  <!-- Zone d'impression étiquettes -->
+  <!-- Zone d'impression étiquettes & commandes -->
   <div id="realPrintArea"></div>
 
   <!-- Inputs fichiers globaux compatibles WebView Android -->
@@ -99,7 +108,7 @@
         <div>
           <div class="flex items-center gap-1.5">
             <h1 class="font-extrabold text-sm tracking-tight text-white">OptiStock <span class="text-cyan-400 font-semibold">Enterprise</span></h1>
-            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.4</span>
+            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.5</span>
           </div>
           <p class="text-[10px] text-slate-400">Traçabilité Réception & Approvisionnement</p>
         </div>
@@ -198,7 +207,7 @@
         <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between text-[11px]">
             <span class="font-bold uppercase tracking-wider text-slate-400">Maintenance & Déploiement</span>
-            <span class="mono text-slate-400">Build v3.4.0-prod</span>
+            <span class="mono text-slate-400">Build v3.5.0-prod</span>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -434,8 +443,8 @@
               <span id="statusStateApi" class="mono text-[11px] text-emerald-400 font-bold">SYNCHRONISÉ</span>
             </div>
             <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800/80">
-              <span>Générateur PDF A4 & Partage Android</span>
-              <span class="mono text-[11px] text-cyan-300 font-bold">ACTIF (jsPDF)</span>
+              <span>Pont Impression & PDF Natif Android</span>
+              <span id="statusNativeBridge" class="mono text-[11px] text-cyan-300 font-bold">ACTIF</span>
             </div>
           </div>
         </div>
@@ -445,7 +454,7 @@
 
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Version installée</span>
-            <span class="mono font-bold text-white">OptiStock Pro v3.4.0 (SDK 34)</span>
+            <span class="mono font-bold text-white">OptiStock Pro v3.5.0 (SDK 34)</span>
           </div>
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Dernière synchro Cloud</span>
@@ -592,7 +601,7 @@
   <div id="toastBox" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-slate-900/95 border border-cyan-500/50 text-xs font-semibold text-white shadow-xl"></div>
 
   <script>
-    // ==================== ÉTAT GLOBAL CLOUD + PERSISTANCE GARANTIE ====================
+    // ==================== ÉTAT GLOBAL CLOUD & VERROU ANTI-ÉCRASEMENT ====================
     const LOCAL_BACKUP_KEY = 'optistock_cloud_backup_v3';
 
     let appState = {
@@ -618,13 +627,14 @@
     } catch (e) {}
 
     let isSavingToCloud = false;
+    let lastLocalMutationTime = 0;
     let currentHistoryFilter = 'all';
     let currentKitchenCategory = 'ALL';
     let appTheme = localStorage.getItem('optistock_theme') || 'dark';
     let rollFormat = localStorage.getItem('optistock_roll_format') || '50x30';
     let customWidth = parseInt(localStorage.getItem('optistock_custom_w')) || 55;
     let customHeight = parseInt(localStorage.getItem('optistock_custom_h')) || 35;
-    let githubRepo = localStorage.getItem('optistock_github_repo') || '';
+    let githubRepo = localStorage.getItem('optistock_github_repo') || 'LeeLooVF/scanbl-labelpro';
 
     window.addEventListener('DOMContentLoaded', () => {
       setAppTheme(appTheme, false);
@@ -635,6 +645,11 @@
       document.getElementById('rollFormatSelect').value = rollFormat;
       document.getElementById('githubRepoInput').value = githubRepo;
       changeRollFormat(rollFormat, false);
+
+      if (window.AndroidBridge) {
+        document.getElementById('statusNativeBridge').textContent = 'PONT APK NATIF ACTIF';
+      }
+
       renderAll();
       syncFromCloud(false);
       setInterval(() => syncFromCloud(false), 8000);
@@ -651,6 +666,26 @@
       box.textContent = msg;
       box.classList.remove('hidden');
       setTimeout(() => box.classList.add('hidden'), 2800);
+    }
+
+    // Fonction d'impression universelle (débloque l'impression dans l'APK Android)
+    function triggerNativeOrWebPrint(jobName = 'OptiStock_Print') {
+      if (window.AndroidBridge && typeof window.AndroidBridge.printPage === 'function') {
+        window.AndroidBridge.printPage(jobName);
+      } else {
+        window.print();
+      }
+    }
+
+    // Nettoyage des caractères spéciaux pour éviter les bugs de police dans jsPDF
+    function cleanPdfText(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/œ/g, 'oe')
+        .replace(/Œ/g, 'OE')
+        .replace(/[’‘]/g, "'")
+        .replace(/[“”]/g, '"')
+        .replace(/\u00A0/g, ' ');
     }
 
     // ==================== GESTION DU THÈME CLAIR / FONCÉ ====================
@@ -721,9 +756,11 @@
       changeRollFormat('CUSTOM', true);
     }
 
-    // ==================== SYNCHRONISATION CLOUD (/state) ====================
+    // ==================== SYNCHRONISATION CLOUD (/state) SANS RÉAPPARITION FANTÔME ====================
     async function syncFromCloud(manual = false) {
       if (isSavingToCloud) return;
+      if (!manual && (Date.now() - lastLocalMutationTime < 4500)) return;
+
       try {
         const res = await fetch('/state', { method: 'GET', headers: { 'Accept': 'application/json' } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -732,26 +769,14 @@
         appState.verifyItems = Array.isArray(data.verifyItems) ? data.verifyItems : [];
         appState.historyItems = Array.isArray(data.historyItems) ? data.historyItems : [];
         appState.sortieIds = Array.isArray(data.sortieIds) ? data.sortieIds : [];
+        appState.kitchenProducts = Array.isArray(data.kitchenProducts) ? data.kitchenProducts : [];
+        appState.kitchenCart = (data.kitchenCart && typeof data.kitchenCart === 'object') ? data.kitchenCart : {};
+
         if (data.shortDateDays) {
-          appState.shortDateDays = parseInt(data.shortDateDays) || appState.shortDateDays;
+          appState.shortDateDays = parseInt(data.shortDateDays) || 7;
           localStorage.setItem('optistock_short_days', appState.shortDateDays);
           document.getElementById('shortDateDaysInput').value = appState.shortDateDays;
           updateShortDateUI();
-        }
-
-        if (Array.isArray(data.kitchenProducts) && data.kitchenProducts.length > 0) {
-          const map = new Map();
-          data.kitchenProducts.forEach(p => map.set(p.name.toLowerCase(), p));
-          appState.kitchenProducts.forEach(p => {
-            if (!map.has(p.name.toLowerCase())) map.set(p.name.toLowerCase(), p);
-          });
-          appState.kitchenProducts = Array.from(map.values());
-        } else if (appState.kitchenProducts.length > 0) {
-          pushToCloud();
-        }
-
-        if (data.kitchenCart && typeof data.kitchenCart === 'object') {
-          appState.kitchenCart = { ...data.kitchenCart, ...appState.kitchenCart };
         }
 
         saveLocalBackup();
@@ -766,6 +791,7 @@
     }
 
     async function pushToCloud() {
+      lastLocalMutationTime = Date.now();
       saveLocalBackup();
       renderAll();
       isSavingToCloud = true;
@@ -910,7 +936,7 @@
       appState.kitchenProducts = appState.kitchenProducts.filter(p => p.id !== id);
       delete appState.kitchenCart[id];
       await pushToCloud();
-      showToast('🗑️ Produit supprimé du référentiel');
+      showToast('🗑️ Produit supprimé définitivement');
     }
 
     function openKitchenModal(editId = null) {
@@ -955,7 +981,7 @@
       pushToCloud();
     }
 
-    // Génération d'un vrai fichier PDF A4 + Ouverture du sélecteur d'application Android
+    // Génération d'un vrai fichier PDF A4 + Ouverture directe Android ("Ouvrir avec...")
     async function exportKitchenOrderPDF() {
       const ordered = appState.kitchenProducts.filter(p => (appState.kitchenCart[p.id] || 0) > 0);
       if (ordered.length === 0) {
@@ -963,18 +989,17 @@
         return;
       }
 
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('fr-FR');
+      const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const refCmd = 'CMD-' + now.getTime().toString().slice(-5);
+      const fileName = `Bon-Commande-${dateStr.replace(/\//g, '-')}-${refCmd}.pdf`;
+
       try {
-        showToast('📄 Génération du fichier PDF A4...');
+        showToast('📄 Génération du PDF A4...');
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('fr-FR');
-        const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-        const refCmd = 'CMD-' + now.getTime().toString().slice(-5);
-        const fileName = `Bon-Commande-${dateStr.replace(/\//g, '-')}-${refCmd}.pdf`;
-
-        // En-tête du PDF A4
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(16);
         doc.setTextColor(15, 23, 42);
@@ -983,21 +1008,21 @@
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(71, 85, 105);
-        doc.text(`Édité sur OptiStock Enterprise le ${dateStr} à ${timeStr}`, 14, 24);
-        doc.text(`Référence : ${refCmd}  |  Total références : ${ordered.length}`, 14, 29);
+        doc.text(cleanPdfText(`Édité sur OptiStock Enterprise le ${dateStr} à ${timeStr}`), 14, 24);
+        doc.text(cleanPdfText(`Référence : ${refCmd}  |  Total références : ${ordered.length}`), 14, 29);
 
         const bodyRows = ordered.map((p, idx) => [
           String(idx + 1),
-          p.name || 'Article',
-          p.category || '-',
-          p.unit || 'Colis',
+          cleanPdfText(p.name || 'Article'),
+          cleanPdfText(p.category || '-'),
+          cleanPdfText(p.unit || 'Colis'),
           String(appState.kitchenCart[p.id] || 1),
           '[   ]'
         ]);
 
         doc.autoTable({
           startY: 34,
-          head: [['#', 'Désignation du Produit', 'Catégorie', 'Conditionnement', 'Qté', 'Pointage']],
+          head: [['#', cleanPdfText('Désignation du Produit'), cleanPdfText('Catégorie'), 'Conditionnement', cleanPdfText('Qté'), 'Pointage']],
           body: bodyRows,
           theme: 'grid',
           headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 9.5 },
@@ -1012,33 +1037,65 @@
           }
         });
 
-        const pdfBlob = doc.output('blob');
-        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-        // 1. Ouvre la fenêtre native Android "Ouvrir avec / Partager le PDF"
-        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-          await navigator.share({
-            files: [pdfFile],
-            title: 'Bon de Commande PDF',
-            text: `Bon de commande ${refCmd} du ${dateStr}`
-          });
-          showToast('✅ Sélecteur d\'application ouvert');
+        // 1. Pont natif APK Android : Ouvre directement la boîte "Ouvrir le PDF avec..."
+        if (window.AndroidBridge && typeof window.AndroidBridge.openPdfBase64 === 'function') {
+          const dataUri = doc.output('datauristring');
+          window.AndroidBridge.openPdfBase64(dataUri, fileName);
+          showToast('📄 Choisissez l\'application pour ouvrir le PDF');
           return;
         }
 
-        // 2. Repli : Téléchargement direct + ouverture du PDF (déclenche le lecteur PDF Android)
-        const blobUrl = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => window.open(blobUrl, '_blank'), 300);
-        showToast('📥 PDF généré et ouvert');
+        // 2. API Web Share native (Chrome Android)
+        const pdfBlob = doc.output('blob');
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          await navigator.share({
+            files: [pdfFile],
+            title: fileName,
+            text: `Bon de commande ${refCmd}`
+          });
+          showToast('✅ Sélecteur Android ouvert');
+          return;
+        }
+
+        // 3. Repli : Spouleur d'impression / Enregistrer en PDF Android
+        const printArea = document.getElementById('realPrintArea');
+        document.getElementById('dynamicPrintStyle').innerHTML = `@page { size: A4 portrait; margin: 10mm; }`;
+        const rowsHtml = ordered.map((p, idx) => `
+          <tr style="border-bottom:1px solid #cbd5e1;">
+            <td style="padding:8px;font-weight:700;">${idx + 1}</td>
+            <td style="padding:8px;font-weight:800;font-size:10.5pt;color:#0f172a;">${p.name}</td>
+            <td style="padding:8px;font-size:9pt;color:#475569;">${p.category || '-'}</td>
+            <td style="padding:8px;font-size:9.5pt;font-weight:700;font-family:monospace;">${p.unit || 'Colis'}</td>
+            <td style="padding:8px;text-align:center;font-size:12pt;font-weight:900;color:#0f172a;">${appState.kitchenCart[p.id]}</td>
+            <td style="padding:8px;text-align:center;">☐</td>
+          </tr>
+        `).join('');
+
+        printArea.innerHTML = `
+          <div class="print-order-a4">
+            <h1 style="font-size:16pt;font-weight:900;margin:0 0 4px 0;">BON DE COMMANDE FOURNISSEUR</h1>
+            <p style="font-size:9.5pt;color:#334155;margin:0 0 14px 0;">Réf: ${refCmd} — Édité le ${dateStr} à ${timeStr}</p>
+            <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
+              <thead>
+                <tr style="background:#f1f5f9;border-bottom:2px solid #0f172a;text-align:left;">
+                  <th style="padding:8px;">#</th>
+                  <th style="padding:8px;">Désignation</th>
+                  <th style="padding:8px;">Catégorie</th>
+                  <th style="padding:8px;">Conditionnement</th>
+                  <th style="padding:8px;text-align:center;">Qté</th>
+                  <th style="padding:8px;text-align:center;">Reçu</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>
+        `;
+        triggerNativeOrWebPrint(fileName);
+        setTimeout(() => changeRollFormat(rollFormat, false), 1500);
       } catch (err) {
         if (err && err.name === 'AbortError') return;
-        showToast('⚠️ ' + (err.message || 'Erreur lors de la création du PDF'));
+        showToast('⚠️ ' + (err.message || 'Erreur PDF'));
       }
     }
 
@@ -1231,7 +1288,7 @@
       });
       appState.verifyItems = [];
       await pushToCloud();
-      window.print();
+      triggerNativeOrWebPrint('Etiquettes_DLC');
       showToast('🖨️ Impression lancée');
       switchTab('historique');
     }
@@ -1323,7 +1380,6 @@
               </div>
             </div>
 
-            <!-- Affichage explicite de la Date de Réception + N° de Lot -->
             <div class="flex items-center justify-between text-[11px] bg-slate-950/90 px-3 py-1.5 rounded-lg border border-slate-800">
               <div class="flex items-center gap-3 flex-wrap">
                 <span class="text-slate-400">📥 Reçu le : <strong class="mono text-white">${recDate}</strong></span>
