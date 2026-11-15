@@ -88,14 +88,15 @@
         <div>
           <div class="flex items-center gap-1.5">
             <h1 class="font-extrabold text-sm tracking-tight text-white">OptiStock <span class="text-cyan-400 font-semibold">Enterprise</span></h1>
-            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.2</span>
+            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.3</span>
           </div>
           <p class="text-[10px] text-slate-400">Traçabilité Réception & Approvisionnement</p>
         </div>
       </div>
 
-      <button type="button" onclick="toggleSortieDrawer(true)" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 flex items-center gap-1.5 text-xs font-semibold transition">
-        <span class="text-slate-300">Sorties DLC</span>
+      <!-- Bouton renommé en "Traiter" -->
+      <button type="button" onclick="toggleSortieDrawer(true)" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 flex items-center gap-1.5 text-xs font-semibold transition">
+        <span class="text-slate-200">✅ Traiter</span>
         <span id="sortieCountBadge" class="px-1.5 py-0.2 rounded bg-rose-600 text-white text-[10px] mono font-bold">0</span>
       </button>
     </header>
@@ -187,7 +188,7 @@
         <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between text-[11px]">
             <span class="font-bold uppercase tracking-wider text-slate-400">Maintenance & Déploiement</span>
-            <span class="mono text-slate-400">Build v3.2.0-prod</span>
+            <span class="mono text-slate-400">Build v3.3.0-prod</span>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -210,7 +211,7 @@
         <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Référentiel Auto-Alimenté par Scan BL</p>
+              <p class="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Référentiel Permanent Cloud</p>
               <h2 class="text-sm font-extrabold text-white">Préparation de Commande (<span id="kitchenTotalCatalogCount">0</span> réf.)</h2>
             </div>
             <button type="button" onclick="openKitchenModal()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow">
@@ -256,7 +257,7 @@
           <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-3xl mx-auto">📷</div>
           <div class="space-y-1">
             <h3 class="text-base font-bold text-white">Numérisation Bon de Livraison</h3>
-            <p class="text-xs text-slate-400">Sélectionnez une méthode de capture pour extraire automatiquement les DLC et alimenter votre catalogue de commande.</p>
+            <p class="text-xs text-slate-400">Sélectionnez une méthode de capture pour extraire automatiquement les DLC et enregistrer les produits dans votre onglet Commande.</p>
           </div>
 
           <div class="grid grid-cols-2 gap-3 pt-2">
@@ -305,7 +306,7 @@
               <h2 class="text-sm font-extrabold text-white"><span id="historyTotalCount">0</span> lots d'étiquettes générés</h2>
             </div>
             <button type="button" onclick="moveAllExpiredToSortie()" class="px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow flex items-center gap-1.5">
-              <span>📤 Sortir dates passées</span>
+              <span>✅ Traiter les dates passées</span>
             </button>
           </div>
 
@@ -400,7 +401,7 @@
 
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Version installée</span>
-            <span class="mono font-bold text-white">OptiStock Pro v3.2.0 (SDK 34)</span>
+            <span class="mono font-bold text-white">OptiStock Pro v3.3.0 (SDK 34)</span>
           </div>
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Dernière synchro Cloud</span>
@@ -522,22 +523,22 @@
     </div>
   </div>
 
-  <!-- Tiroir Sorties DLC -->
+  <!-- Tiroir "Traiter" (DLC traitées & Suppression définitive) -->
   <div id="sortieDrawer" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-end">
     <div class="bg-slate-900 border-l border-slate-800 w-full max-w-sm h-full flex flex-col justify-between p-4">
       <div class="space-y-3 overflow-y-auto">
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
           <div>
-            <h3 class="text-sm font-extrabold text-white">Liste de Retrait / Dates Passées</h3>
-            <p class="text-[11px] text-slate-400">Synchronisée sur tous les terminaux</p>
+            <h3 class="text-sm font-extrabold text-white">DLC à Traiter / Traités</h3>
+            <p class="text-[11px] text-slate-400">Produits retirés ou dates passées traitées</p>
           </div>
           <button type="button" onclick="toggleSortieDrawer(false)" class="px-2.5 py-1 rounded bg-slate-800 text-xs">Fermer</button>
         </div>
         <div id="sortieDrawerList" class="space-y-2"></div>
       </div>
       <div class="pt-3 border-t border-slate-800 space-y-2">
-        <button type="button" onclick="printSortieTicket()" class="w-full py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs">
-          🖨️ Imprimer le ticket de retrait DLC
+        <button type="button" onclick="deleteAllTreatedPermanently()" class="w-full py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg flex items-center justify-center gap-1.5">
+          <span>🗑️ Supprimer définitivement</span>
         </button>
       </div>
     </div>
@@ -547,7 +548,9 @@
   <div id="toastBox" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-slate-900/95 border border-cyan-500/50 text-xs font-semibold text-white shadow-xl"></div>
 
   <script>
-    // ==================== ÉTAT GLOBAL CLOUD & SYNCHRO INTELLIGENTE ====================
+    // ==================== ÉTAT GLOBAL CLOUD + PERSISTANCE GARANTIE ====================
+    const LOCAL_BACKUP_KEY = 'optistock_cloud_backup_v3';
+
     let appState = {
       verifyItems: [],
       historyItems: [],
@@ -556,6 +559,20 @@
       kitchenCart: {}
     };
 
+    // Restauration immédiate au démarrage avant même la réponse réseau
+    try {
+      const cached = localStorage.getItem(LOCAL_BACKUP_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.kitchenProducts)) appState.kitchenProducts = parsed.kitchenProducts;
+        if (parsed.kitchenCart && typeof parsed.kitchenCart === 'object') appState.kitchenCart = parsed.kitchenCart;
+        if (Array.isArray(parsed.verifyItems)) appState.verifyItems = parsed.verifyItems;
+        if (Array.isArray(parsed.historyItems)) appState.historyItems = parsed.historyItems;
+        if (Array.isArray(parsed.sortieIds)) appState.sortieIds = parsed.sortieIds;
+      }
+    } catch (e) {}
+
+    let isSavingToCloud = false;
     let currentHistoryFilter = 'all';
     let currentKitchenCategory = 'ALL';
     let rollFormat = localStorage.getItem('optistock_roll_format') || '50x30';
@@ -569,9 +586,16 @@
       document.getElementById('rollFormatSelect').value = rollFormat;
       document.getElementById('githubRepoInput').value = githubRepo;
       changeRollFormat(rollFormat, false);
+      renderAll();
       syncFromCloud(false);
       setInterval(() => syncFromCloud(false), 8000);
     });
+
+    function saveLocalBackup() {
+      try {
+        localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(appState));
+      } catch (e) {}
+    }
 
     function showToast(msg) {
       const box = document.getElementById('toastBox');
@@ -606,28 +630,36 @@
       changeRollFormat('CUSTOM', true);
     }
 
-    // ==================== SYNCHRONISATION CLOUD AVEC FUSION INTELLIGENTE ====================
+    // ==================== SYNCHRONISATION CLOUD (/state) ====================
     async function syncFromCloud(manual = false) {
+      if (isSavingToCloud) return;
       try {
         const res = await fetch('/state', { method: 'GET', headers: { 'Accept': 'application/json' } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        
+
         appState.verifyItems = Array.isArray(data.verifyItems) ? data.verifyItems : [];
         appState.historyItems = Array.isArray(data.historyItems) ? data.historyItems : [];
         appState.sortieIds = Array.isArray(data.sortieIds) ? data.sortieIds : [];
 
-        if (Array.isArray(data.kitchenProducts)) {
+        // Si le serveur Cloud a des produits, on fusionne sans jamais écraser les produits locaux non encore poussés
+        if (Array.isArray(data.kitchenProducts) && data.kitchenProducts.length > 0) {
           const map = new Map();
-          appState.kitchenProducts.forEach(p => map.set(p.id, p));
-          data.kitchenProducts.forEach(p => { if (!map.has(p.id)) map.set(p.id, p); });
+          data.kitchenProducts.forEach(p => map.set(p.name.toLowerCase(), p));
+          appState.kitchenProducts.forEach(p => {
+            if (!map.has(p.name.toLowerCase())) map.set(p.name.toLowerCase(), p);
+          });
           appState.kitchenProducts = Array.from(map.values());
+        } else if (appState.kitchenProducts.length > 0) {
+          // Si le Cloud était vide (ex: ancien state.js) mais qu'on a des produits en mémoire, on les pousse au Cloud
+          pushToCloud();
         }
 
         if (data.kitchenCart && typeof data.kitchenCart === 'object') {
           appState.kitchenCart = { ...data.kitchenCart, ...appState.kitchenCart };
         }
 
+        saveLocalBackup();
         document.getElementById('lastSyncTimeDisplay').textContent = new Date().toLocaleTimeString('fr-FR');
         document.getElementById('statusStateApi').textContent = 'EN LIGNE • KV SYNC';
         document.getElementById('homeQuickStatus').textContent = '● CLOUD SYNCHRONISÉ';
@@ -639,7 +671,9 @@
     }
 
     async function pushToCloud() {
+      saveLocalBackup();
       renderAll();
+      isSavingToCloud = true;
       try {
         await fetch('/state', {
           method: 'POST',
@@ -654,7 +688,9 @@
         });
         document.getElementById('lastSyncTimeDisplay').textContent = new Date().toLocaleTimeString('fr-FR');
       } catch (e) {
-        showToast('⚠️ Erreur de sauvegarde Cloud');
+        showToast('⚠️ Sauvegardé localement (attente réseau)');
+      } finally {
+        isSavingToCloud = false;
       }
     }
 
@@ -742,8 +778,8 @@
                 <span class="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-[10px] mono font-bold text-amber-300">${prod.unit || 'Colis'}</span>
                 <span class="text-[10px] text-slate-400">${prod.category || 'Général'}</span>
               </div>
-              <!-- Nom complet sur 2 lignes max sans troncature brutale -->
-              <h4 class="text-xs font-bold text-white line-clamp-2 break-words mt-1 leading-snug">${prod.name}</h4>
+              <!-- Nom complet sur 2 lignes en texte légèrement plus compact -->
+              <h4 class="text-[11px] font-bold text-white line-clamp-2 break-words mt-1 leading-snug">${prod.name}</h4>
             </div>
 
             <div class="flex items-center gap-1.5 shrink-0">
@@ -775,10 +811,10 @@
       showToast('🧹 Quantités de commande remises à 0');
     }
 
-    function deleteKitchenProduct(id) {
+    async function deleteKitchenProduct(id) {
       appState.kitchenProducts = appState.kitchenProducts.filter(p => p.id !== id);
       delete appState.kitchenCart[id];
-      pushToCloud();
+      await pushToCloud();
       showToast('🗑️ Produit supprimé du référentiel');
     }
 
@@ -831,6 +867,7 @@
         return;
       }
 
+      document.getElementById('dynamicPrintStyle').innerHTML = `@page { size: A4 portrait; margin: 10mm; }`;
       const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
@@ -876,6 +913,7 @@
 
       window.print();
       showToast('📄 Boîte d\'impression / PDF ouverte');
+      setTimeout(() => changeRollFormat(rollFormat, false), 1500);
     }
 
     // ==================== SCAN BL (SANS PRÉVISUALISATION VIDÉO) ====================
@@ -1014,11 +1052,11 @@
       container.innerHTML = appState.verifyItems.map(item => `
         <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2">
           <div class="flex items-start justify-between gap-2">
-            <div>
+            <div class="min-w-0 flex-1">
               <span class="text-[10px] mono text-slate-400">${item.blNumber || 'BL'} • ${item.lot}</span>
-              <h4 class="text-sm font-bold text-white">${item.name}</h4>
+              <h4 class="text-xs font-bold text-white line-clamp-2 break-words leading-snug mt-0.5">${item.name}</h4>
             </div>
-            <div class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+            <div class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shrink-0">
               <div class="text-[9px] text-slate-400 uppercase">DLC / DLUO</div>
               <div class="text-xs font-extrabold text-amber-400 mono">${formatDateFR(item.dlc)}</div>
             </div>
@@ -1089,7 +1127,7 @@
       `;
     }
 
-    // ==================== HISTORIQUE & SORTIES ====================
+    // ==================== HISTORIQUE & MODULE "TRAITER" ====================
     function setHistoryFilter(filter) {
       currentHistoryFilter = filter;
       ['all', 'expired', 'short', 'valid'].forEach(f => {
@@ -1133,20 +1171,24 @@
         const inSortie = appState.sortieIds.includes(item.id);
         let badge = diff < 0 ? `<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px] font-bold">PÉRIMÉ (${diff}j)</span>` : (diff <= 7 ? `<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">COURT (J-${diff})</span>` : `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">VALIDE (+${diff}j)</span>`);
         return `
-          <div class="p-3 rounded-xl bg-[#0f172a] border ${inSortie ? 'border-rose-500/60' : 'border-slate-800'} space-y-2">
+          <div class="p-3 rounded-xl bg-[#0f172a] border ${inSortie ? 'border-emerald-500/60' : 'border-slate-800'} space-y-2">
             <div class="flex items-start justify-between gap-2">
-              <div>
-                <div class="flex items-center gap-1.5">${badge}<span class="text-[10px] mono text-slate-400">${item.blNumber || ''}</span></div>
-                <h4 class="text-sm font-bold text-white mt-1">${item.name}</h4>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  ${badge}
+                  <span class="text-[10px] mono text-slate-400">${item.blNumber || ''}</span>
+                  ${inSortie ? '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 text-[9px] font-bold">TRAITÉ</span>' : ''}
+                </div>
+                <h4 class="text-xs font-bold text-white line-clamp-2 break-words mt-1 leading-snug">${item.name}</h4>
               </div>
-              <div class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+              <div class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shrink-0">
                 <div class="text-[9px] text-slate-400 uppercase">DLC</div>
                 <div class="text-xs font-extrabold ${diff < 0 ? 'text-rose-400' : 'text-cyan-300'} mono">${formatDateFR(item.dlc)}</div>
               </div>
             </div>
             <div class="flex items-center justify-between text-xs bg-slate-950/90 px-3 py-1.5 rounded-lg border border-slate-800">
               <span class="text-slate-400">Lot : <strong class="mono text-white">${item.lot}</strong></span>
-              <button type="button" onclick="toggleItemSortie('${item.id}')" class="text-rose-400 font-bold hover:underline">${inSortie ? 'Retirer sortie' : '📤 Sortir date passée'}</button>
+              <button type="button" onclick="toggleItemSortie('${item.id}')" class="text-emerald-400 font-bold hover:underline">${inSortie ? '↩️ Annuler traitement' : '✅ Traiter DLC'}</button>
             </div>
           </div>
         `;
@@ -1166,7 +1208,7 @@
       });
       pushToCloud();
       toggleSortieDrawer(true);
-      showToast(`📤 ${added} produit(s) périmé(s) ajoutés aux sorties`);
+      showToast(`✅ ${added} DLC passée(s) basculée(s) dans Traiter`);
     }
 
     function toggleSortieDrawer(open) {
@@ -1178,30 +1220,44 @@
       document.getElementById('sortieCountBadge').textContent = appState.sortieIds.length;
       const list = document.getElementById('sortieDrawerList');
       const items = appState.historyItems.filter(x => appState.sortieIds.includes(x.id));
-      if (items.length === 0) { list.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Aucun produit dans la liste de retrait.</p>`; return; }
+      if (items.length === 0) {
+        list.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Aucune DLC dans la liste des produits traités.</p>`;
+        return;
+      }
       list.innerHTML = items.map(item => `
         <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
-          <div>
-            <div class="text-xs font-bold text-white">${item.name}</div>
-            <div class="text-[10px] mono text-rose-400">DLC: ${formatDateFR(item.dlc)} • ${item.lot}</div>
+          <div class="min-w-0 flex-1">
+            <div class="text-xs font-bold text-white line-clamp-2 break-words">${item.name}</div>
+            <div class="text-[10px] mono text-rose-400 mt-0.5">DLC: ${formatDateFR(item.dlc)} • ${item.lot}</div>
           </div>
-          <button type="button" onclick="toggleItemSortie('${item.id}')" class="px-2 py-1 rounded bg-slate-800 text-[10px]">↩️</button>
+          <div class="flex gap-1 shrink-0">
+            <button type="button" onclick="toggleItemSortie('${item.id}')" title="Remettre dans l'historique" class="px-2 py-1 rounded bg-slate-800 text-[10px]">↩️</button>
+            <button type="button" onclick="purgeSingleHistoryItem('${item.id}')" title="Supprimer définitivement" class="px-2 py-1 rounded bg-rose-600/30 text-rose-300 text-[10px]">🗑️</button>
+          </div>
         </div>
       `).join('');
     }
 
-    function printSortieTicket() {
-      const items = appState.historyItems.filter(x => appState.sortieIds.includes(x.id));
-      if (items.length === 0) return;
-      const { w } = getRollDimensions();
-      const printArea = document.getElementById('realPrintArea');
-      printArea.innerHTML = `
-        <div class="print-label-sheet" style="width:${w}mm;">
-          <div style="font-weight:900;font-size:10pt;border-bottom:2px solid #000;margin-bottom:4px;">BORDEREAU RETRAIT DLC</div>
-          ${items.map(i => `<div style="font-size:8.5pt;border-bottom:1px dashed #999;padding:2px 0;"><b>${i.name}</b><br/>DLC: ${formatDateFR(i.dlc)} | ${i.lot}</div>`).join('')}
-        </div>
-      `;
-      window.print();
+    async function purgeSingleHistoryItem(id) {
+      appState.historyItems = appState.historyItems.filter(x => x.id !== id);
+      appState.sortieIds = appState.sortieIds.filter(x => x !== id);
+      await pushToCloud();
+      showToast('🗑️ Produit supprimé définitivement');
+    }
+
+    // Bouton principal du tiroir : Supprimer définitivement toutes les DLC traitées
+    async function deleteAllTreatedPermanently() {
+      if (appState.sortieIds.length === 0) {
+        showToast('Aucun produit à supprimer');
+        return;
+      }
+      const count = appState.sortieIds.length;
+      const toRemove = new Set(appState.sortieIds);
+      appState.historyItems = appState.historyItems.filter(x => !toRemove.has(x.id));
+      appState.sortieIds = [];
+      await pushToCloud();
+      toggleSortieDrawer(false);
+      showToast(`🗑️ ${count} produit(s) traité(s) supprimé(s) définitivement`);
     }
 
     function openItemModal(id = null) {
