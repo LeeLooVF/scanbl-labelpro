@@ -5,6 +5,8 @@ const DEFAULT_STATE = {
   sortieIds: [],
   kitchenProducts: [],
   kitchenCart: {},
+  scannedBLHistory: [],
+  orderHistory: [],
   shortDateDays: 7,
   updatedAt: new Date().toISOString()
 };
@@ -27,6 +29,8 @@ export async function onRequestGet(context) {
       sortieIds: Array.isArray(parsed.sortieIds) ? parsed.sortieIds : [],
       kitchenProducts: Array.isArray(parsed.kitchenProducts) ? parsed.kitchenProducts : [],
       kitchenCart: (parsed.kitchenCart && typeof parsed.kitchenCart === "object") ? parsed.kitchenCart : {},
+      scannedBLHistory: Array.isArray(parsed.scannedBLHistory) ? parsed.scannedBLHistory : [],
+      orderHistory: Array.isArray(parsed.orderHistory) ? parsed.orderHistory : [],
       shortDateDays: Number(parsed.shortDateDays) > 0 ? Number(parsed.shortDateDays) : 7,
       updatedAt: parsed.updatedAt || new Date().toISOString()
     };
@@ -66,6 +70,8 @@ export async function onRequestPost(context) {
       sortieIds: Array.isArray(body.sortieIds) ? body.sortieIds : (oldState.sortieIds || []),
       kitchenProducts: Array.isArray(body.kitchenProducts) ? body.kitchenProducts : (oldState.kitchenProducts || []),
       kitchenCart: (body.kitchenCart && typeof body.kitchenCart === "object") ? body.kitchenCart : (oldState.kitchenCart || {}),
+      scannedBLHistory: Array.isArray(body.scannedBLHistory) ? body.scannedBLHistory : (oldState.scannedBLHistory || []),
+      orderHistory: Array.isArray(body.orderHistory) ? body.orderHistory : (oldState.orderHistory || []),
       shortDateDays: Number(body.shortDateDays) > 0 ? Number(body.shortDateDays) : (Number(oldState.shortDateDays) || 7),
       updatedAt: new Date().toISOString(),
       updatedBy: body.terminalId || "TERMINAL"
