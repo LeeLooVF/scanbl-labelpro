@@ -40,19 +40,60 @@ jobs:
           fi
           npx cap sync android
 
-      - name: 6. Permissions Android 14/15 sans avertissement + Relais Caméra/Fichiers
+      - name: 6. Génération et application de l'icône officielle OptiStock Pro
+        run: |
+          sudo apt-get update && sudo apt-get install -y imagemagick
+          if [ ! -f "icon.png" ]; then
+            cat << 'EOF' > icon.svg
+          <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="512" height="512" viewBox="0 0 512 512">
+            <defs>
+              <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#090d16"/>
+                <stop offset="100%" stop-color="#0f172a"/>
+              </linearGradient>
+              <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#06b6d4"/>
+                <stop offset="100%" stop-color="#10b981"/>
+              </linearGradient>
+            </defs>
+            <rect width="512" height="512" rx="115" fill="url(#bg)"/>
+            <rect x="36" y="36" width="440" height="440" rx="95" fill="none" stroke="url(#accent)" stroke-width="10" stroke-opacity="0.45"/>
+            <rect x="120" y="96" width="272" height="320" rx="28" fill="#1e293b" stroke="#38bdf8" stroke-width="8"/>
+            <rect x="160" y="150" width="192" height="20" rx="10" fill="#94a3b8"/>
+            <rect x="160" y="195" width="140" height="20" rx="10" fill="#94a3b8"/>
+            <rect x="160" y="310" width="24" height="65" fill="#f8fafc"/>
+            <rect x="200" y="310" width="12" height="65" fill="#f8fafc"/>
+            <rect x="228" y="310" width="32" height="65" fill="#f8fafc"/>
+            <rect x="276" y="310" width="14" height="65" fill="#f8fafc"/>
+            <rect x="306" y="310" width="22" height="65" fill="#f8fafc"/>
+            <rect x="340" y="310" width="12" height="65" fill="#f8fafc"/>
+            <rect x="64" y="250" width="384" height="14" rx="7" fill="url(#accent)"/>
+          </svg>
+          EOF
+            convert -background none icon.svg -resize 512x512 icon.png
+          fi
+
+          for dir in android/app/src/main/res/mipmap-*; do
+            if [ -d "$dir" ]; then
+              rm -f "$dir/ic_launcher.webp" "$dir/ic_launcher_round.webp" "$dir/ic_launcher_foreground.webp"
+              convert icon.png -resize 192x192 "$dir/ic_launcher.png"
+              convert icon.png -resize 192x192 "$dir/ic_launcher_round.png"
+              convert icon.png -resize 432x432 "$dir/ic_launcher_foreground.png"
+            fi
+          done
+
+      - name: 7. Permissions demandées UNE SEULE FOIS au premier démarrage
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
             sed -i '/<application/i \    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.BLUETOOTH" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />' "$MANIFEST"
           fi
 
-          # Garantit targetSdkVersion 34 pour supprimer l'avertissement Android d'ancienne version
           if [ -f "android/variables.gradle" ]; then
             sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 34/g' android/variables.gradle
           fi
 
-          # Demande groupée des autorisations dès l'ouverture sans écraser le FileChooser Capacitor
+          # Ne demande les permissions qu'UNE SEULE FOIS au tout premier lancement (mémorisé dans SharedPreferences)
           MAIN_ACT=$(find android/app/src/main/java -name "MainActivity.java" | head -n 1)
           if [ -n "$MAIN_ACT" ]; then
             PKG_LINE=$(head -n 1 "$MAIN_ACT")
@@ -60,48 +101,63 @@ jobs:
           $PKG_LINE
 
           import android.Manifest;
+          import android.content.SharedPreferences;
+          import android.content.pm.PackageManager;
           import android.os.Build;
           import android.os.Bundle;
           import androidx.core.app.ActivityCompat;
+          import androidx.core.content.ContextCompat;
           import com.getcapacitor.BridgeActivity;
+          import java.util.ArrayList;
+          import java.util.List;
 
           public class MainActivity extends BridgeActivity {
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                      ActivityCompat.requestPermissions(this, new String[]{
-                          Manifest.permission.CAMERA,
-                          Manifest.permission.READ_MEDIA_IMAGES,
-                          Manifest.permission.BLUETOOTH_CONNECT,
-                          Manifest.permission.BLUETOOTH_SCAN
-                      }, 101);
-                  } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                      ActivityCompat.requestPermissions(this, new String[]{
-                          Manifest.permission.CAMERA,
-                          Manifest.permission.READ_EXTERNAL_STORAGE,
-                          Manifest.permission.WRITE_EXTERNAL_STORAGE
-                      }, 101);
+                  SharedPreferences prefs = getSharedPreferences("OptiStockPerms", MODE_PRIVATE);
+                  boolean alreadyAsked = prefs.getBoolean("asked_once", false);
+
+                  if (!alreadyAsked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                      prefs.edit().putBoolean("asked_once", true).apply();
+                      List<String> needed = new ArrayList<>();
+
+                      if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                          needed.add(Manifest.permission.CAMERA);
+                      }
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                          if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                              needed.add(Manifest.permission.READ_MEDIA_IMAGES);
+                          }
+                      } else {
+                          if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                              needed.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+                          }
+                      }
+
+                      if (!needed.isEmpty()) {
+                          ActivityCompat.requestPermissions(this, needed.toArray(new String[0]), 101);
+                      }
                   }
               }
           }
           EOF
           fi
 
-      - name: 7. Compilation de l'APK OptiStock Pro
+      - name: 8. Compilation de l'APK OptiStock Pro
         working-directory: ./android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
           cp app/build/outputs/apk/debug/app-debug.apk ../OptiStock-Pro.apk
 
-      - name: 8. Publication dans Artifacts
+      - name: 9. Publication dans Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: OptiStock-Pro-APK
           path: OptiStock-Pro.apk
 
-      - name: 9. Publication automatique sur GitHub Releases (Lien direct de téléchargement)
+      - name: 10. Publication automatique sur GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
