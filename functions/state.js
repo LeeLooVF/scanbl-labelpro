@@ -3,6 +3,8 @@ const DEFAULT_STATE = {
   verifyItems: [],
   historyItems: [],
   sortieIds: [],
+  kitchenProducts: [],
+  kitchenCart: {},
   updatedAt: new Date().toISOString()
 };
 
@@ -17,7 +19,15 @@ export async function onRequestGet(context) {
     }
 
     const raw = await env.SCANBL_KV.get("TEAM_STATE");
-    const state = raw ? JSON.parse(raw) : DEFAULT_STATE;
+    const parsed = raw ? JSON.parse(raw) : {};
+    const state = {
+      verifyItems: Array.isArray(parsed.verifyItems) ? parsed.verifyItems : [],
+      historyItems: Array.isArray(parsed.historyItems) ? parsed.historyItems : [],
+      sortieIds: Array.isArray(parsed.sortieIds) ? parsed.sortieIds : [],
+      kitchenProducts: Array.isArray(parsed.kitchenProducts) ? parsed.kitchenProducts : [],
+      kitchenCart: (parsed.kitchenCart && typeof parsed.kitchenCart === "object") ? parsed.kitchenCart : {},
+      updatedAt: parsed.updatedAt || new Date().toISOString()
+    };
 
     return new Response(JSON.stringify(state), {
       status: 200,
@@ -45,10 +55,15 @@ export async function onRequestPost(context) {
     }
 
     const body = await request.json();
+    const rawOld = await env.SCANBL_KV.get("TEAM_STATE");
+    const oldState = rawOld ? JSON.parse(rawOld) : DEFAULT_STATE;
+
     const newState = {
-      verifyItems: Array.isArray(body.verifyItems) ? body.verifyItems : [],
-      historyItems: Array.isArray(body.historyItems) ? body.historyItems : [],
-      sortieIds: Array.isArray(body.sortieIds) ? body.sortieIds : [],
+      verifyItems: Array.isArray(body.verifyItems) ? body.verifyItems : (oldState.verifyItems || []),
+      historyItems: Array.isArray(body.historyItems) ? body.historyItems : (oldState.historyItems || []),
+      sortieIds: Array.isArray(body.sortieIds) ? body.sortieIds : (oldState.sortieIds || []),
+      kitchenProducts: Array.isArray(body.kitchenProducts) ? body.kitchenProducts : (oldState.kitchenProducts || []),
+      kitchenCart: (body.kitchenCart && typeof body.kitchenCart === "object") ? body.kitchenCart : (oldState.kitchenCart || {}),
       updatedAt: new Date().toISOString(),
       updatedBy: body.terminalId || "TERMINAL"
     };
