@@ -40,63 +40,36 @@ jobs:
           fi
           npx cap sync android
 
-      - name: 6. Application de l'icône iconeOptiStock E.png (Adaptative + Densités), Permissions & Pont Natif
+      - name: 6. Application de l'icône iconeOptiStock E.png, Permissions & Pont Natif
         run: |
           sudo apt-get update && sudo apt-get install -y imagemagick
 
-          # Détection automatique de votre fichier iconeOptiStock E.png à la racine du dépôt
-          FOUND_ICON=$(find . -maxdepth 1 -iname "*icone*optistock*.png" -o -iname "icon.png" | head -n 1)
+          # Détecte "iconeOptiStock E.png" à la racine du dépôt GitHub
+          FOUND_ICON=$(find . -maxdepth 1 -iname "*iconeoptistock*.png" -o -iname "icon.png" | head -n 1)
           if [ -n "$FOUND_ICON" ]; then
-            echo "Icône trouvée : $FOUND_ICON"
-            cp "$FOUND_ICON" source_icon.png
+            cp "$FOUND_ICON" icon_source.png
           else
-            cat << 'EOF' > icon.svg
-          <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-            <rect width="512" height="512" rx="115" fill="#090d16"/>
-            <rect x="120" y="96" width="272" height="320" rx="28" fill="#1e293b" stroke="#38bdf8" stroke-width="8"/>
-          </svg>
-          EOF
-            convert -background none icon.svg -resize 512x512 source_icon.png
+            convert -size 512x512 xc:"#090d16" icon_source.png
           fi
 
-          # Nettoyage complet des anciennes icônes Capacitor par défaut (PNG, WEBP et XML)
-          find android/app/src/main/res -name "ic_launcher*" -delete
+          # Copie l'icône dans www/ pour l'afficher aussi dans l'en-tête de l'application
+          cp icon_source.png www/app-icon.png
+          npx cap copy android
 
-          # Génération aux tailles officielles Android pour chaque densité + foreground adaptatif avec marge de sécurité
-          declare -A SIZES=( ["mdpi"]=48 ["hdpi"]=72 ["xhdpi"]=96 ["xxhdpi"]=144 ["xxxhdpi"]=192 )
-          declare -A FG_SIZES=( ["mdpi"]=108 ["hdpi"]=162 ["xhdpi"]=216 ["xxhdpi"]=324 ["xxxhdpi"]=432 )
+          # Supprime les fichiers XML adaptatifs et WebP par défaut qui masquent le PNG
+          find android/app/src/main/res -name "ic_launcher*.xml" -delete
+          find android/app/src/main/res -name "ic_launcher*.webp" -delete
 
-          for density in "${!SIZES[@]}"; do
-            DIR="android/app/src/main/res/mipmap-$density"
-            mkdir -p "$DIR"
-            SZ=${SIZES[$density]}
-            FGSZ=${FG_SIZES[$density]}
-            INNER=$(( FGSZ * 66 / 100 ))
-
-            convert source_icon.png -resize "${SZ}x${SZ}!" "$DIR/ic_launcher.png"
-            convert source_icon.png -resize "${SZ}x${SZ}!" "$DIR/ic_launcher_round.png"
-            convert source_icon.png -resize "${INNER}x${INNER}" -background "#090d16" -gravity center -extent "${FGSZ}x${FGSZ}" "$DIR/ic_launcher_foreground.png"
+          # Génère les résolutions exactes requises par le lanceur Android
+          declare -A SIZES=( ["mipmap-mdpi"]=48 ["mipmap-hdpi"]=72 ["mipmap-xhdpi"]=96 ["mipmap-xxhdpi"]=144 ["mipmap-xxxhdpi"]=192 )
+          for folder in "${!SIZES[@]}"; do
+            TARGET="android/app/src/main/res/$folder"
+            mkdir -p "$TARGET"
+            SZ=${SIZES[$folder]}
+            convert icon_source.png -resize ${SZ}x${SZ} "$TARGET/ic_launcher.png"
+            convert icon_source.png -resize ${SZ}x${SZ} "$TARGET/ic_launcher_round.png"
+            convert icon_source.png -resize ${SZ}x${SZ} "$TARGET/ic_launcher_foreground.png"
           done
-
-          # Création des descripteurs d'icônes adaptatives Android 8+ (mipmap-anydpi-v26)
-          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-          cat << 'EOF' > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@color/ic_launcher_background"/>
-              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-          </adaptive-icon>
-          EOF
-          cp android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-
-          # Couleur de fond officielle de l'icône
-          mkdir -p android/app/src/main/res/values
-          cat << 'EOF' > android/app/src/main/res/values/ic_launcher_background.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <color name="ic_launcher_background">#090D16</color>
-          </resources>
-          EOF
 
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
