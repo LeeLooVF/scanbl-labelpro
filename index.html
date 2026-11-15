@@ -250,7 +250,7 @@
         </div>
       </section>
 
-      <!-- ==================== ONGLET 1 : SCANNER (SANS PREVIEW VIDÉO) ==================== -->
+      <!-- ==================== ONGLET 1 : SCANNER (SANS PRÉVISUALISATION VIDÉO) ==================== -->
       <section id="tab-scanner" class="hidden space-y-3">
         <div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center space-y-4 shadow-xl">
           <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-3xl mx-auto">📷</div>
@@ -617,7 +617,6 @@
         appState.historyItems = Array.isArray(data.historyItems) ? data.historyItems : [];
         appState.sortieIds = Array.isArray(data.sortieIds) ? data.sortieIds : [];
 
-        // Fusion intelligente pour ne jamais perdre les produits ajoutés localement
         if (Array.isArray(data.kitchenProducts)) {
           const map = new Map();
           appState.kitchenProducts.forEach(p => map.set(p.id, p));
@@ -825,10 +824,12 @@
       pushToCloud();
     }
 
-    // EXPORT PDF ROBUSTE AVEC CAPACITOR PRINT ET FALLBACK WEB PRINT
-    async function exportKitchenOrderPDF() {
+    function exportKitchenOrderPDF() {
       const ordered = appState.kitchenProducts.filter(p => (appState.kitchenCart[p.id] || 0) > 0);
-      if (ordered.length === 0) { showToast('⚠️ Sélectionnez au moins 1 produit à commander'); return; }
+      if (ordered.length === 0) {
+        showToast('⚠️ Sélectionnez au moins 1 produit à commander');
+        return;
+      }
 
       const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -844,11 +845,9 @@
         </tr>
       `).join('');
 
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head><meta charset="utf-8"><title>Bon de Commande</title></head>
-        <body style="font-family:sans-serif;padding:20px;color:#000;background:#fff;">
+      const printArea = document.getElementById('realPrintArea');
+      printArea.innerHTML = `
+        <div class="print-order-a4">
           <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #0f172a;padding-bottom:10px;margin-bottom:16px;">
             <div>
               <div style="font-size:16pt;font-weight:900;color:#0f172a;">BON DE COMMANDE FOURNISSEUR</div>
@@ -872,25 +871,11 @@
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
-        </body>
-        </html>
+        </div>
       `;
 
-      try {
-        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Print) {
-          await window.Capacitor.Plugins.Print.print({ content: htmlContent });
-          showToast('📄 Export PDF / Impression lancé');
-        } else {
-          const printArea = document.getElementById('realPrintArea');
-          printArea.innerHTML = `<div class="print-order-a4">${htmlContent}</div>`;
-          window.print();
-          showToast('📄 Export PDF / Impression lancé');
-        }
-      } catch (e) {
-        const printArea = document.getElementById('realPrintArea');
-        printArea.innerHTML = `<div class="print-order-a4">${htmlContent}</div>`;
-        window.print();
-      }
+      window.print();
+      showToast('📄 Boîte d\'impression / PDF ouverte');
     }
 
     // ==================== SCAN BL (SANS PRÉVISUALISATION VIDÉO) ====================
@@ -1276,7 +1261,7 @@
     }
     function softRefreshUI() { syncFromCloud(true); }
     async function hardForceRefresh() {
-      showToast('⚡ Recharger...');
+      showToast('⚡ Rechargement...');
       if ('caches' in window) { const names = await caches.keys(); await Promise.all(names.map(n => caches.delete(n))); }
       setTimeout(() => window.location.reload(true), 500);
     }
