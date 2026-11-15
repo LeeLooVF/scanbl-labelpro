@@ -106,7 +106,7 @@
         <div>
           <div class="flex items-center gap-1.5">
             <h1 class="font-extrabold text-sm tracking-tight text-white">OptiStock <span class="text-cyan-400 font-semibold">Enterprise</span></h1>
-            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.8</span>
+            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.9</span>
           </div>
           <p class="text-[10px] text-slate-400">Traçabilité Réception & Approvisionnement</p>
         </div>
@@ -205,7 +205,7 @@
         <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between text-[11px]">
             <span class="font-bold uppercase tracking-wider text-slate-400">Maintenance & Déploiement</span>
-            <span class="mono text-slate-400">Build v3.8.0-prod</span>
+            <span class="mono text-slate-400">Build v3.9.0-prod</span>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -370,11 +370,16 @@
           <div id="historyOrdersListContainer" class="space-y-2"></div>
         </div>
 
-        <!-- SOUS-SECTION 4 : ARCHIVES MENSUELLES (Regroupées chaque 1er du mois) -->
-        <div id="hist-panel-archives" class="hidden space-y-2">
-          <div class="px-3 py-2 rounded-xl bg-[#0f172a] border border-slate-800">
-            <p class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Dossiers Mensuels Archivés</p>
-            <p class="text-[11px] text-slate-400">Chaque 1er du mois, les BL scannés et commandes du mois précédent sont rangés automatiquement dans un dossier mensuel.</p>
+        <!-- SOUS-SECTION 4 : ARCHIVES MENSUELLES (Avec export PDF du mois complet + Bouton de simulation) -->
+        <div id="hist-panel-archives" class="hidden space-y-2.5">
+          <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 flex items-center justify-between gap-2">
+            <div>
+              <p class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Dossiers Mensuels Archivés</p>
+              <p class="text-[11px] text-slate-400">Regroupement automatique chaque 1er du mois avec export PDF mensuel.</p>
+            </div>
+            <button type="button" onclick="simulateArchivedMonth()" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-extrabold text-[10px] shrink-0 active:scale-95 transition">
+              🧪 Simuler 1 mois
+            </button>
           </div>
           <div id="historyArchivesListContainer" class="space-y-2.5"></div>
         </div>
@@ -489,7 +494,7 @@
 
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Version installée</span>
-            <span class="mono font-bold text-white">OptiStock Pro v3.8.0 (SDK 34)</span>
+            <span class="mono font-bold text-white">OptiStock Pro v3.9.0 (SDK 34)</span>
           </div>
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Dernière synchro Cloud</span>
@@ -768,6 +773,34 @@
         .replace(/[’‘]/g, "'")
         .replace(/[“”]/g, '"')
         .replace(/\u00A0/g, ' ');
+    }
+
+    // Fonction universelle pour ouvrir/partager un document jsPDF sur Android ou navigateur
+    async function openOrShareJsPdfDoc(doc, fileName, shareTitle) {
+      if (window.AndroidBridge && typeof window.AndroidBridge.openPdfBase64 === 'function') {
+        const dataUri = doc.output('datauristring');
+        window.AndroidBridge.openPdfBase64(dataUri, fileName);
+        return;
+      }
+
+      const pdfBlob = doc.output('blob');
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          files: [pdfFile],
+          title: fileName,
+          text: shareTitle || fileName
+        });
+        return;
+      }
+
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
     // ==================== GESTION DU THÈME CLAIR / FONCÉ ====================
@@ -1122,30 +1155,7 @@
         }
       });
 
-      if (window.AndroidBridge && typeof window.AndroidBridge.openPdfBase64 === 'function') {
-        const dataUri = doc.output('datauristring');
-        window.AndroidBridge.openPdfBase64(dataUri, fileName);
-        return;
-      }
-
-      const pdfBlob = doc.output('blob');
-      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        await navigator.share({
-          files: [pdfFile],
-          title: fileName,
-          text: `Bon de commande ${refCmd}`
-        });
-        return;
-      }
-
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      await openOrShareJsPdfDoc(doc, fileName, `Bon de commande ${refCmd}`);
     }
 
     async function exportKitchenOrderPDF() {
@@ -1197,6 +1207,235 @@
       const ord = appState.orderHistory.find(o => o.id === orderId);
       if (!ord) return;
       await generateAndOpenOrderPdfDocument(ord);
+    }
+
+    // ==================== EXPORT PDF D'UN MOIS ARCHIVÉ COMPLET (BL + COMMANDES) ====================
+    async function exportMonthArchivePDF(ymKey) {
+      const folderTitle = formatMonthFolderLabel(ymKey);
+      const bls = appState.scannedBLHistory.filter(bl => getMonthKeyFromItem(bl, 'bl') === ymKey);
+      const ords = appState.orderHistory.filter(ord => getMonthKeyFromItem(ord, 'order') === ymKey);
+
+      if (bls.length === 0 && ords.length === 0) {
+        showToast('⚠️ Aucune donnée dans ce dossier mensuel');
+        return;
+      }
+
+      try {
+        showToast(`📄 Génération du bilan PDF ${folderTitle}...`);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const fileName = `Archive-Mensuelle-${ymKey}.pdf`;
+
+        // En-tête du rapport mensuel
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(15);
+        doc.setTextColor(15, 23, 42);
+        doc.text(cleanPdfText(`ARCHIVE MENSUELLE LOGISTIQUE — ${folderTitle.toUpperCase()}`), 14, 17);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        doc.setTextColor(71, 85, 105);
+        doc.text(
+          cleanPdfText(`OptiStock Enterprise  |  ${bls.length} Bon(s) de Livraison scanné(s)  |  ${ords.length} Commande(s) passée(s)`),
+          14,
+          23
+        );
+
+        let currentY = 29;
+
+        // SECTION 1 : Tableau récapitulatif des Bons de Livraison du mois
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(6, 182, 212);
+        doc.text(cleanPdfText(`1. BONS DE LIVRAISON REÇUS (${bls.length})`), 14, currentY);
+        currentY += 3;
+
+        const blRows = [];
+        bls.forEach(bl => {
+          (bl.items || []).forEach(it => {
+            blRows.push([
+              cleanPdfText(bl.blNumber || 'BL'),
+              formatDateFR(bl.receivedDate),
+              cleanPdfText(it.name || 'Article'),
+              cleanPdfText(it.unit || 'Colis'),
+              formatDateFR(it.dlc),
+              cleanPdfText(it.lot || '-')
+            ]);
+          });
+        });
+
+        if (blRows.length > 0) {
+          doc.autoTable({
+            startY: currentY,
+            head: [['N° BL', cleanPdfText('Reçu le'), cleanPdfText('Désignation Produit'), 'Cond.', 'DLC / DLUO', 'N° Lot']],
+            body: blRows,
+            theme: 'grid',
+            headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+            bodyStyles: { fontSize: 8.5, textColor: [15, 23, 42] },
+            columnStyles: {
+              0: { cellWidth: 24, fontStyle: 'bold' },
+              1: { cellWidth: 22 },
+              2: { cellWidth: 68, fontStyle: 'bold' },
+              3: { cellWidth: 24 },
+              4: { cellWidth: 24 },
+              5: { cellWidth: 24 }
+            }
+          });
+          currentY = doc.lastAutoTable.finalY + 10;
+        } else {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 116, 139);
+          doc.text('Aucun Bon de Livraison archivé sur cette période.', 14, currentY + 5);
+          currentY += 12;
+        }
+
+        // Nouvelle page si manque d'espace
+        if (currentY > 250) {
+          doc.addPage();
+          currentY = 18;
+        }
+
+        // SECTION 2 : Tableau récapitulatif des Commandes passées du mois
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(217, 119, 6);
+        doc.text(cleanPdfText(`2. COMMANDES FOURNISSEURS PASSÉES (${ords.length})`), 14, currentY);
+        currentY += 3;
+
+        const ordRows = [];
+        ords.forEach(ord => {
+          (ord.items || []).forEach(it => {
+            ordRows.push([
+              cleanPdfText(ord.refCmd || 'CMD'),
+              cleanPdfText(`${ord.dateStr || ''} ${ord.timeStr || ''}`.trim()),
+              cleanPdfText(it.name || 'Article'),
+              cleanPdfText(it.category || '-'),
+              cleanPdfText(it.unit || 'Colis'),
+              String(it.qty || 1)
+            ]);
+          });
+        });
+
+        if (ordRows.length > 0) {
+          doc.autoTable({
+            startY: currentY,
+            head: [[cleanPdfText('Réf. Cmd'), 'Date', cleanPdfText('Désignation Produit'), cleanPdfText('Catégorie'), 'Conditionnement', cleanPdfText('Qté')]],
+            body: ordRows,
+            theme: 'grid',
+            headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+            bodyStyles: { fontSize: 8.5, textColor: [15, 23, 42] },
+            columnStyles: {
+              0: { cellWidth: 25, fontStyle: 'bold' },
+              1: { cellWidth: 28 },
+              2: { cellWidth: 63, fontStyle: 'bold' },
+              3: { cellWidth: 32 },
+              4: { cellWidth: 24 },
+              5: { cellWidth: 14, halign: 'center', fontStyle: 'bold' }
+            }
+          });
+        } else {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 116, 139);
+          doc.text('Aucune commande archivée sur cette période.', 14, currentY + 5);
+        }
+
+        await openOrShareJsPdfDoc(doc, fileName, `Archive Mensuelle ${folderTitle}`);
+        showToast(`✅ Rapport PDF ${folderTitle} généré`);
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        showToast('⚠️ ' + (err.message || 'Erreur export PDF mensuel'));
+      }
+    }
+
+    // ==================== SIMULATION D'UN MOIS ARCHIVÉ POUR TESTER ====================
+    async function simulateArchivedMonth() {
+      // Calcule le mois précédent (ex: 2026-10 si nous sommes en novembre 2026)
+      const now = new Date();
+      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+      const ym = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+      const [y, m] = ym.split('-');
+
+      // Évite de recréer deux fois la même démo si on reclique dessus
+      appState.scannedBLHistory = appState.scannedBLHistory.filter(b => !String(b.id).startsWith('SIM-BL-'));
+      appState.orderHistory = appState.orderHistory.filter(o => !String(o.id).startsWith('SIM-ORD-'));
+
+      appState.scannedBLHistory.push(
+        {
+          id: 'SIM-BL-1',
+          blNumber: 'BL-78410',
+          receivedDate: `${ym}-08`,
+          scannedAt: '08:15',
+          itemCount: 3,
+          items: [
+            { name: 'Filet de Boeuf Charolais (Frais)', unit: 'Kg', dlc: `${ym}-18`, lot: 'LOT-B801' },
+            { name: 'Crème Liquide UHT 35% MG', unit: 'Carton x6', dlc: `${ym}-28`, lot: 'LOT-C402' },
+            { name: 'Pommes de terre Ratte du Touquet', unit: 'Filet 5kg', dlc: `${ym}-25`, lot: 'LOT-R109' }
+          ]
+        },
+        {
+          id: 'SIM-BL-2',
+          blNumber: 'BL-78952',
+          receivedDate: `${ym}-21`,
+          scannedAt: '09:40',
+          itemCount: 2,
+          items: [
+            { name: 'Saumon Entier Éviscéré Écosse', unit: 'Caisse 3kg', dlc: `${ym}-29`, lot: 'LOT-S920' },
+            { name: 'Beurre de Baratte Doux AOP', unit: 'Motte 2.5kg', dlc: `${ym}-30`, lot: 'LOT-M311' }
+          ]
+        }
+      );
+
+      appState.orderHistory.push(
+        {
+          id: 'SIM-ORD-1',
+          refCmd: 'CMD-41028',
+          dateStr: `06/${m}/${y}`,
+          timeStr: '14:20',
+          createdAt: `${ym}-06T14:20:00.000Z`,
+          totalRefs: 3,
+          totalUnits: 9,
+          items: [
+            { name: 'Filet de Boeuf Charolais (Frais)', unit: 'Kg', category: 'Viandes & Poissons', qty: 4 },
+            { name: 'Crème Liquide UHT 35% MG', unit: 'Carton x6', category: 'Crèmerie & Frais', qty: 3 },
+            { name: 'Pommes de terre Ratte du Touquet', unit: 'Filet 5kg', category: 'Fruits & Légumes', qty: 2 }
+          ]
+        },
+        {
+          id: 'SIM-ORD-2',
+          refCmd: 'CMD-41890',
+          dateStr: `19/${m}/${y}`,
+          timeStr: '17:05',
+          createdAt: `${ym}-19T17:05:00.000Z`,
+          totalRefs: 2,
+          totalUnits: 5,
+          items: [
+            { name: 'Saumon Entier Éviscéré Écosse', unit: 'Caisse 3kg', category: 'Viandes & Poissons', qty: 2 },
+            { name: 'Beurre de Baratte Doux AOP', unit: 'Motte 2.5kg', category: 'Crèmerie & Frais', qty: 3 }
+          ]
+        }
+      );
+
+      openArchiveFolders[ym] = true;
+      await pushToCloud();
+      switchHistorySubTab('archives');
+      showToast(`🧪 Dossier d'archive « ${formatMonthFolderLabel(ym)} » généré !`);
+    }
+
+    function deleteEntireArchiveMonth(ymKey) {
+      const folderTitle = formatMonthFolderLabel(ymKey);
+      askDeleteConfirmation(
+        `Supprimer le dossier ${folderTitle} ?`,
+        `Voulez-vous vraiment supprimer définitivement tous les BL scannés et toutes les commandes du mois de « ${folderTitle} » ?`,
+        async () => {
+          appState.scannedBLHistory = appState.scannedBLHistory.filter(bl => getMonthKeyFromItem(bl, 'bl') !== ymKey);
+          appState.orderHistory = appState.orderHistory.filter(ord => getMonthKeyFromItem(ord, 'order') !== ymKey);
+          delete openArchiveFolders[ymKey];
+          await pushToCloud();
+          showToast(`🗑️ Dossier ${folderTitle} supprimé`);
+        }
+      );
     }
 
     // ==================== SCAN BL ====================
@@ -1486,7 +1725,6 @@
       if (lblBl) lblBl.textContent = currentMonthTitle;
       if (lblOrd) lblOrd.textContent = currentMonthTitle;
 
-      // 1. Dates courtes à traiter (triées par DLC la plus proche)
       const shortItems = appState.historyItems
         .filter(item => {
           if (appState.sortieIds.includes(item.id)) return false;
@@ -1497,7 +1735,6 @@
         })
         .sort((a, b) => new Date(a.dlc) - new Date(b.dlc));
 
-      // Séparation automatique au 1er du mois : Mois en cours vs Archives des mois passés
       const currentMonthBLs = [];
       const archivedBLs = [];
       appState.scannedBLHistory.forEach(bl => {
@@ -1512,7 +1749,6 @@
         else archivedOrders.push(ord);
       });
 
-      // Regroupement des archives par dossier mensuel (YYYY-MM)
       const archiveFoldersMap = {};
       archivedBLs.forEach(bl => {
         const ym = getMonthKeyFromItem(bl, 'bl');
@@ -1598,10 +1834,16 @@
         ordContainer.innerHTML = filteredOrders.map(ord => renderOrderCardHTML(ord)).join('');
       }
 
-      // Rendu 4 : Dossiers Mensuels dans ARCHIVES
+      // Rendu 4 : Dossiers Mensuels dans ARCHIVES (Avec bouton "📄 PDF Mois" + Suppression dossier)
       const archContainer = document.getElementById('historyArchivesListContainer');
       if (sortedArchiveMonths.length === 0) {
-        archContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucun dossier mensuel archivé pour le moment. Les BL et commandes de ${currentMonthTitle} seront automatiquement regroupés ici le 1er du mois prochain.</div>`;
+        archContainer.innerHTML = `
+          <div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center space-y-3">
+            <p class="text-xs text-slate-400">Aucun dossier mensuel archivé pour le moment. Les BL et commandes de ${currentMonthTitle} seront automatiquement regroupés ici le 1er du mois prochain.</p>
+            <button type="button" onclick="simulateArchivedMonth()" class="px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-extrabold text-xs shadow">
+              🧪 Générer un mois archivé de test
+            </button>
+          </div>`;
       } else {
         archContainer.innerHTML = sortedArchiveMonths.map(ym => {
           const folder = archiveFoldersMap[ym];
@@ -1614,17 +1856,28 @@
           if (query && fBls.length === 0 && fOrds.length === 0) return '';
 
           return `
-            <div class="rounded-xl bg-[#0f172a] border border-slate-800 overflow-hidden">
-              <button type="button" onclick="toggleArchiveFolder('${ym}')" class="w-full p-3.5 flex items-center justify-between text-left hover:bg-slate-900 transition">
-                <div class="flex items-center gap-2.5">
+            <div class="rounded-xl bg-[#0f172a] border border-slate-800 overflow-hidden shadow">
+              <div class="p-3 flex items-center justify-between gap-2 bg-slate-900/60">
+                <div onclick="toggleArchiveFolder('${ym}')" class="flex items-center gap-2.5 cursor-pointer min-w-0 flex-1">
                   <span class="text-lg">📁</span>
-                  <div>
-                    <h4 class="text-xs font-extrabold text-white">${folderTitle}</h4>
-                    <p class="text-[10px] text-slate-400 mono">${fBls.length} BL scanné(s) • ${fOrds.length} Commande(s)</p>
+                  <div class="min-w-0">
+                    <h4 class="text-xs font-extrabold text-white truncate">${folderTitle}</h4>
+                    <p class="text-[10px] text-slate-400 mono">${fBls.length} BL • ${fOrds.length} Cmd</p>
                   </div>
                 </div>
-                <span class="text-xs font-bold text-cyan-400">${isOpen ? '▼ Fermer' : '▶ Ouvrir'}</span>
-              </button>
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <button type="button" onclick="exportMonthArchivePDF('${ym}')" class="px-2.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[10px] shadow flex items-center gap-1 active:scale-95 transition">
+                    <span>📄 PDF Mois</span>
+                  </button>
+                  <button type="button" onclick="deleteEntireArchiveMonth('${ym}')" title="Supprimer tout ce mois" class="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center">
+                    🗑️
+                  </button>
+                  <button type="button" onclick="toggleArchiveFolder('${ym}')" class="px-2 py-1 rounded bg-slate-800 text-[10px] font-bold text-cyan-400">
+                    ${isOpen ? '▼' : '▶'}
+                  </button>
+                </div>
+              </div>
 
               ${isOpen ? `
                 <div class="p-3 border-t border-slate-800 bg-slate-950/60 space-y-3">
