@@ -99,16 +99,14 @@
   <!-- Conteneur Principal OptiStock Pro -->
   <div id="appRoot" class="max-w-md w-full mx-auto min-h-screen flex flex-col bg-[#0b111e] shadow-2xl relative pb-20">
 
-    <!-- En-tête Exécutif -->
+    <!-- En-tête Exécutif avec votre icône iconeOptiStock E.png -->
     <header class="px-4 py-3 bg-[#0f172a]/95 backdrop-blur border-b border-slate-800/90 flex items-center justify-between sticky top-0 z-30">
       <div onclick="switchTab('accueil')" class="flex items-center gap-2.5 cursor-pointer">
-        <div class="w-9 h-9 rounded-lg bg-slate-900 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-black text-xs tracking-tighter shadow-inner">
-          OS
-        </div>
+        <img src="iconeOptiStock%20E.png" onerror="this.onerror=null; this.src='app-icon.png';" alt="OptiStock" class="w-9 h-9 rounded-lg object-cover border border-cyan-500/40 shadow-inner bg-slate-900" />
         <div>
           <div class="flex items-center gap-1.5">
             <h1 class="font-extrabold text-sm tracking-tight text-white">OptiStock <span class="text-cyan-400 font-semibold">Enterprise</span></h1>
-            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.7</span>
+            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.8</span>
           </div>
           <p class="text-[10px] text-slate-400">Traçabilité Réception & Approvisionnement</p>
         </div>
@@ -207,7 +205,7 @@
         <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between text-[11px]">
             <span class="font-bold uppercase tracking-wider text-slate-400">Maintenance & Déploiement</span>
-            <span class="mono text-slate-400">Build v3.7.0-prod</span>
+            <span class="mono text-slate-400">Build v3.8.0-prod</span>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -316,23 +314,26 @@
         <div id="verifyListContainer" class="space-y-2"></div>
       </section>
 
-      <!-- ==================== ONGLET 3 : HISTORIQUE (DATES COURTES TRIÉES + BL SCANNÉS + COMMANDES) ==================== -->
+      <!-- ==================== ONGLET 3 : HISTORIQUE (COURTES + BL MOIS + CMD MOIS + ARCHIVES) ==================== -->
       <section id="tab-historique" class="hidden space-y-3">
         <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
-          <div class="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px] font-bold">
+          <div class="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[10px] font-bold">
             <button type="button" id="hsub-short" onclick="switchHistorySubTab('short')" class="py-2 rounded bg-cyan-500 text-slate-950 font-extrabold">
               ⏳ Courtes (<span id="countShortBadge">0</span>)
             </button>
             <button type="button" id="hsub-bl" onclick="switchHistorySubTab('bl')" class="py-2 rounded text-slate-400">
-              📦 BL Scannés (<span id="countBlBadge">0</span>)
+              📦 BL (<span id="countBlBadge">0</span>)
             </button>
             <button type="button" id="hsub-orders" onclick="switchHistorySubTab('orders')" class="py-2 rounded text-slate-400">
-              📄 Commandes (<span id="countOrdersBadge">0</span>)
+              📄 Cmd (<span id="countOrdersBadge">0</span>)
+            </button>
+            <button type="button" id="hsub-archives" onclick="switchHistorySubTab('archives')" class="py-2 rounded text-slate-400">
+              🗄️ Archives (<span id="countArchivesBadge">0</span>)
             </button>
           </div>
 
           <div class="relative">
-            <input id="historySearchInput" type="text" oninput="renderHistory()" placeholder="Rechercher dans cet historique..." class="w-full pl-3 pr-8 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500" />
+            <input id="historySearchInput" type="text" oninput="renderHistory()" placeholder="Rechercher un produit, BL, commande ou mois..." class="w-full pl-3 pr-8 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500" />
             <button type="button" onclick="document.getElementById('historySearchInput').value=''; renderHistory();" class="absolute right-2.5 top-2 text-slate-500 text-xs">✕</button>
           </div>
         </div>
@@ -351,14 +352,31 @@
           <div id="historyShortListContainer" class="space-y-2"></div>
         </div>
 
-        <!-- SOUS-SECTION 2 : HISTORIQUE DES BONS DE LIVRAISON SCANNÉS -->
+        <!-- SOUS-SECTION 2 : BL SCANNÉS DU MOIS EN COURS -->
         <div id="hist-panel-bl" class="hidden space-y-2">
+          <div class="px-3 py-2 rounded-xl bg-[#0f172a] border border-slate-800 flex items-center justify-between">
+            <span class="text-[10px] uppercase tracking-wider text-cyan-400 font-bold">Bons de Livraison — Mois en cours</span>
+            <span id="currentMonthBlLabel" class="mono text-[10px] text-slate-400 font-semibold"></span>
+          </div>
           <div id="historyBlListContainer" class="space-y-2"></div>
         </div>
 
-        <!-- SOUS-SECTION 3 : HISTORIQUE DES COMMANDES PASSÉES -->
+        <!-- SOUS-SECTION 3 : COMMANDES DU MOIS EN COURS -->
         <div id="hist-panel-orders" class="hidden space-y-2">
+          <div class="px-3 py-2 rounded-xl bg-[#0f172a] border border-slate-800 flex items-center justify-between">
+            <span class="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Commandes passées — Mois en cours</span>
+            <span id="currentMonthOrdersLabel" class="mono text-[10px] text-slate-400 font-semibold"></span>
+          </div>
           <div id="historyOrdersListContainer" class="space-y-2"></div>
+        </div>
+
+        <!-- SOUS-SECTION 4 : ARCHIVES MENSUELLES (Regroupées chaque 1er du mois) -->
+        <div id="hist-panel-archives" class="hidden space-y-2">
+          <div class="px-3 py-2 rounded-xl bg-[#0f172a] border border-slate-800">
+            <p class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Dossiers Mensuels Archivés</p>
+            <p class="text-[11px] text-slate-400">Chaque 1er du mois, les BL scannés et commandes du mois précédent sont rangés automatiquement dans un dossier mensuel.</p>
+          </div>
+          <div id="historyArchivesListContainer" class="space-y-2.5"></div>
         </div>
       </section>
 
@@ -471,7 +489,7 @@
 
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Version installée</span>
-            <span class="mono font-bold text-white">OptiStock Pro v3.7.0 (SDK 34)</span>
+            <span class="mono font-bold text-white">OptiStock Pro v3.8.0 (SDK 34)</span>
           </div>
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Dernière synchro Cloud</span>
@@ -674,6 +692,7 @@
     let currentHistorySubTab = 'short';
     let currentKitchenCategory = 'ALL';
     let pendingDeleteCallback = null;
+    let openArchiveFolders = {};
     let appTheme = localStorage.getItem('optistock_theme') || 'dark';
     let rollFormat = localStorage.getItem('optistock_roll_format') || '50x30';
     let customWidth = parseInt(localStorage.getItem('optistock_custom_w')) || 55;
@@ -1411,15 +1430,47 @@
       `;
     }
 
-    // ==================== HISTORIQUE : 1. DATES COURTES À TRAITER | 2. BL SCANNÉS | 3. COMMANDES ====================
+    // ==================== HISTORIQUE : COURTES | BL MOIS | CMD MOIS | ARCHIVES MENSUELLES ====================
+    function getMonthKeyFromItem(item, type) {
+      if (type === 'bl') {
+        if (item.receivedDate && /^\d{4}-\d{2}/.test(item.receivedDate)) {
+          return item.receivedDate.slice(0, 7);
+        }
+      } else if (type === 'order') {
+        if (item.createdAt && /^\d{4}-\d{2}/.test(item.createdAt)) {
+          return item.createdAt.slice(0, 7);
+        }
+        if (item.dateStr && /^\d{2}\/\d{2}\/\d{4}$/.test(item.dateStr)) {
+          const parts = item.dateStr.split('/');
+          return `${parts[2]}-${parts[1]}`;
+        }
+      }
+      return new Date().toISOString().slice(0, 7);
+    }
+
+    function formatMonthFolderLabel(ymKey) {
+      const [year, month] = ymKey.split('-');
+      const d = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const label = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      return label.charAt(0).toUpperCase() + label.slice(1);
+    }
+
+    function toggleArchiveFolder(ymKey) {
+      openArchiveFolders[ymKey] = !openArchiveFolders[ymKey];
+      renderHistory();
+    }
+
     function switchHistorySubTab(sub) {
       currentHistorySubTab = sub;
-      ['short', 'bl', 'orders'].forEach(s => {
-        document.getElementById('hist-panel-' + s).classList.toggle('hidden', s !== sub);
+      ['short', 'bl', 'orders', 'archives'].forEach(s => {
+        const panel = document.getElementById('hist-panel-' + s);
+        if (panel) panel.classList.toggle('hidden', s !== sub);
         const btn = document.getElementById('hsub-' + s);
-        btn.className = (s === sub)
-          ? 'py-2 rounded bg-cyan-500 text-slate-950 font-extrabold'
-          : 'py-2 rounded text-slate-400';
+        if (btn) {
+          btn.className = (s === sub)
+            ? 'py-2 rounded bg-cyan-500 text-slate-950 font-extrabold'
+            : 'py-2 rounded text-slate-400';
+        }
       });
       renderHistory();
     }
@@ -1427,7 +1478,15 @@
     function renderHistory() {
       const query = (document.getElementById('historySearchInput')?.value || '').toLowerCase().trim();
       const shortLimit = Math.max(1, parseInt(appState.shortDateDays) || 7);
+      const currentMonthKey = new Date().toISOString().slice(0, 7);
+      const currentMonthTitle = formatMonthFolderLabel(currentMonthKey);
 
+      const lblBl = document.getElementById('currentMonthBlLabel');
+      const lblOrd = document.getElementById('currentMonthOrdersLabel');
+      if (lblBl) lblBl.textContent = currentMonthTitle;
+      if (lblOrd) lblOrd.textContent = currentMonthTitle;
+
+      // 1. Dates courtes à traiter (triées par DLC la plus proche)
       const shortItems = appState.historyItems
         .filter(item => {
           if (appState.sortieIds.includes(item.id)) return false;
@@ -1438,10 +1497,41 @@
         })
         .sort((a, b) => new Date(a.dlc) - new Date(b.dlc));
 
-      document.getElementById('countShortBadge').textContent = shortItems.length;
-      document.getElementById('countBlBadge').textContent = appState.scannedBLHistory.length;
-      document.getElementById('countOrdersBadge').textContent = appState.orderHistory.length;
+      // Séparation automatique au 1er du mois : Mois en cours vs Archives des mois passés
+      const currentMonthBLs = [];
+      const archivedBLs = [];
+      appState.scannedBLHistory.forEach(bl => {
+        if (getMonthKeyFromItem(bl, 'bl') === currentMonthKey) currentMonthBLs.push(bl);
+        else archivedBLs.push(bl);
+      });
 
+      const currentMonthOrders = [];
+      const archivedOrders = [];
+      appState.orderHistory.forEach(ord => {
+        if (getMonthKeyFromItem(ord, 'order') === currentMonthKey) currentMonthOrders.push(ord);
+        else archivedOrders.push(ord);
+      });
+
+      // Regroupement des archives par dossier mensuel (YYYY-MM)
+      const archiveFoldersMap = {};
+      archivedBLs.forEach(bl => {
+        const ym = getMonthKeyFromItem(bl, 'bl');
+        if (!archiveFoldersMap[ym]) archiveFoldersMap[ym] = { bls: [], orders: [] };
+        archiveFoldersMap[ym].bls.push(bl);
+      });
+      archivedOrders.forEach(ord => {
+        const ym = getMonthKeyFromItem(ord, 'order');
+        if (!archiveFoldersMap[ym]) archiveFoldersMap[ym] = { bls: [], orders: [] };
+        archiveFoldersMap[ym].orders.push(ord);
+      });
+      const sortedArchiveMonths = Object.keys(archiveFoldersMap).sort().reverse();
+
+      document.getElementById('countShortBadge').textContent = shortItems.length;
+      document.getElementById('countBlBadge').textContent = currentMonthBLs.length;
+      document.getElementById('countOrdersBadge').textContent = currentMonthOrders.length;
+      document.getElementById('countArchivesBadge').textContent = sortedArchiveMonths.length;
+
+      // Rendu 1 : Dates courtes
       const shortContainer = document.getElementById('historyShortListContainer');
       if (shortItems.length === 0) {
         shortContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucune date courte à traiter actuellement.</div>`;
@@ -1468,7 +1558,6 @@
                   <div class="text-xs font-extrabold ${diff < 0 ? 'text-rose-400' : 'text-amber-300'} mono">${formatDateFR(item.dlc)}</div>
                 </div>
               </div>
-
               <div class="flex items-center justify-between text-[11px] bg-slate-950/90 px-3 py-1.5 rounded-lg border border-slate-800">
                 <div class="flex items-center gap-3 flex-wrap">
                   <span class="text-slate-400">📥 Reçu le : <strong class="mono text-white">${recDate}</strong></span>
@@ -1481,75 +1570,130 @@
         }).join('');
       }
 
+      // Rendu 2 : BL Scannés du mois en cours
       const blContainer = document.getElementById('historyBlListContainer');
-      const filteredBl = appState.scannedBLHistory.filter(bl => {
+      const filteredBl = currentMonthBLs.filter(bl => {
         if (!query) return true;
         const names = (bl.items || []).map(i => i.name).join(' ');
         return `${bl.blNumber} ${bl.receivedDate} ${names}`.toLowerCase().includes(query);
       });
 
       if (filteredBl.length === 0) {
-        blContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucun Bon de Livraison scanné dans l'historique.</div>`;
+        blContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucun BL scanné sur ${currentMonthTitle}.</div>`;
       } else {
-        blContainer.innerHTML = filteredBl.map(bl => `
-          <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div>
-                <span class="text-xs font-extrabold text-cyan-400 mono">${bl.blNumber || 'BL'}</span>
-                <div class="text-[10px] text-slate-400">📥 Reçu le ${formatDateFR(bl.receivedDate)} ${bl.scannedAt ? 'à ' + bl.scannedAt : ''}</div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] mono font-bold text-white">${bl.itemCount || (bl.items ? bl.items.length : 0)} réf.</span>
-                <button type="button" onclick="deleteScannedBlRecord('${bl.id}')" title="Supprimer ce BL" class="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center">🗑️</button>
-              </div>
-            </div>
-            <div class="space-y-1">
-              ${(bl.items || []).map(it => `
-                <div class="flex items-center justify-between text-[11px] bg-slate-950/70 px-2.5 py-1 rounded border border-slate-800/60 gap-2">
-                  <span class="font-semibold text-white truncate">${it.name}</span>
-                  <span class="mono text-[10px] text-amber-300 shrink-0">${it.unit || 'Colis'} • DLC ${formatDateFR(it.dlc)}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `).join('');
+        blContainer.innerHTML = filteredBl.map(bl => renderBlCardHTML(bl)).join('');
       }
 
+      // Rendu 3 : Commandes du mois en cours
       const ordContainer = document.getElementById('historyOrdersListContainer');
-      const filteredOrders = appState.orderHistory.filter(ord => {
+      const filteredOrders = currentMonthOrders.filter(ord => {
         if (!query) return true;
         const names = (ord.items || []).map(i => i.name).join(' ');
         return `${ord.refCmd} ${ord.dateStr} ${names}`.toLowerCase().includes(query);
       });
 
       if (filteredOrders.length === 0) {
-        ordContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucune commande passée dans l'historique.</div>`;
+        ordContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucune commande passée sur ${currentMonthTitle}.</div>`;
       } else {
-        ordContainer.innerHTML = filteredOrders.map(ord => `
-          <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-              <div>
-                <span class="text-xs font-extrabold text-amber-400 mono">${ord.refCmd}</span>
-                <div class="text-[10px] text-slate-400">📅 Passée le ${ord.dateStr} à ${ord.timeStr || ''}</div>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <button type="button" onclick="reprintPastOrderPDF('${ord.id}')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
-                  📄 Ouvrir PDF
-                </button>
-                <button type="button" onclick="deleteOrderRecord('${ord.id}')" title="Supprimer cette commande" class="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center">🗑️</button>
-              </div>
-            </div>
-            <div class="space-y-1">
-              ${(ord.items || []).map(it => `
-                <div class="flex items-center justify-between text-[11px] bg-slate-950/70 px-2.5 py-1 rounded border border-slate-800/60 gap-2">
-                  <span class="font-semibold text-white truncate">${it.name}</span>
-                  <span class="mono text-[10px] text-cyan-300 shrink-0">${it.unit || 'Colis'} × <b>${it.qty}</b></span>
+        ordContainer.innerHTML = filteredOrders.map(ord => renderOrderCardHTML(ord)).join('');
+      }
+
+      // Rendu 4 : Dossiers Mensuels dans ARCHIVES
+      const archContainer = document.getElementById('historyArchivesListContainer');
+      if (sortedArchiveMonths.length === 0) {
+        archContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucun dossier mensuel archivé pour le moment. Les BL et commandes de ${currentMonthTitle} seront automatiquement regroupés ici le 1er du mois prochain.</div>`;
+      } else {
+        archContainer.innerHTML = sortedArchiveMonths.map(ym => {
+          const folder = archiveFoldersMap[ym];
+          const folderTitle = formatMonthFolderLabel(ym);
+          const isOpen = !!openArchiveFolders[ym] || !!query;
+
+          const fBls = folder.bls.filter(bl => !query || `${bl.blNumber} ${bl.receivedDate} ${(bl.items || []).map(i => i.name).join(' ')} ${folderTitle}`.toLowerCase().includes(query));
+          const fOrds = folder.orders.filter(ord => !query || `${ord.refCmd} ${ord.dateStr} ${(ord.items || []).map(i => i.name).join(' ')} ${folderTitle}`.toLowerCase().includes(query));
+
+          if (query && fBls.length === 0 && fOrds.length === 0) return '';
+
+          return `
+            <div class="rounded-xl bg-[#0f172a] border border-slate-800 overflow-hidden">
+              <button type="button" onclick="toggleArchiveFolder('${ym}')" class="w-full p-3.5 flex items-center justify-between text-left hover:bg-slate-900 transition">
+                <div class="flex items-center gap-2.5">
+                  <span class="text-lg">📁</span>
+                  <div>
+                    <h4 class="text-xs font-extrabold text-white">${folderTitle}</h4>
+                    <p class="text-[10px] text-slate-400 mono">${fBls.length} BL scanné(s) • ${fOrds.length} Commande(s)</p>
+                  </div>
                 </div>
-              `).join('')}
+                <span class="text-xs font-bold text-cyan-400">${isOpen ? '▼ Fermer' : '▶ Ouvrir'}</span>
+              </button>
+
+              ${isOpen ? `
+                <div class="p-3 border-t border-slate-800 bg-slate-950/60 space-y-3">
+                  <div class="space-y-1.5">
+                    <div class="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400">📦 Bons de Livraison (${fBls.length})</div>
+                    ${fBls.length > 0 ? fBls.map(bl => renderBlCardHTML(bl)).join('') : '<p class="text-[11px] text-slate-500">Aucun BL sur ce mois.</p>'}
+                  </div>
+                  <div class="space-y-1.5 pt-2 border-t border-slate-800/80">
+                    <div class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">📄 Commandes Passées (${fOrds.length})</div>
+                    ${fOrds.length > 0 ? fOrds.map(ord => renderOrderCardHTML(ord)).join('') : '<p class="text-[11px] text-slate-500">Aucune commande sur ce mois.</p>'}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function renderBlCardHTML(bl) {
+      return `
+        <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div>
+              <span class="text-xs font-extrabold text-cyan-400 mono">${bl.blNumber || 'BL'}</span>
+              <div class="text-[10px] text-slate-400">📥 Reçu le ${formatDateFR(bl.receivedDate)} ${bl.scannedAt ? 'à ' + bl.scannedAt : ''}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] mono font-bold text-white">${bl.itemCount || (bl.items ? bl.items.length : 0)} réf.</span>
+              <button type="button" onclick="deleteScannedBlRecord('${bl.id}')" title="Supprimer ce BL" class="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center">🗑️</button>
             </div>
           </div>
-        `).join('');
-      }
+          <div class="space-y-1">
+            ${(bl.items || []).map(it => `
+              <div class="flex items-center justify-between text-[11px] bg-slate-950/70 px-2.5 py-1 rounded border border-slate-800/60 gap-2">
+                <span class="font-semibold text-white truncate">${it.name}</span>
+                <span class="mono text-[10px] text-amber-300 shrink-0">${it.unit || 'Colis'} • DLC ${formatDateFR(it.dlc)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderOrderCardHTML(ord) {
+      return `
+        <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <div>
+              <span class="text-xs font-extrabold text-amber-400 mono">${ord.refCmd}</span>
+              <div class="text-[10px] text-slate-400">📅 Passée le ${ord.dateStr} à ${ord.timeStr || ''}</div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="reprintPastOrderPDF('${ord.id}')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
+                📄 Ouvrir PDF
+              </button>
+              <button type="button" onclick="deleteOrderRecord('${ord.id}')" title="Supprimer cette commande" class="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center">🗑️</button>
+            </div>
+          </div>
+          <div class="space-y-1">
+            ${(ord.items || []).map(it => `
+              <div class="flex items-center justify-between text-[11px] bg-slate-950/70 px-2.5 py-1 rounded border border-slate-800/60 gap-2">
+                <span class="font-semibold text-white truncate">${it.name}</span>
+                <span class="mono text-[10px] text-cyan-300 shrink-0">${it.unit || 'Colis'} × <b>${it.qty}</b></span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
     }
 
     function deleteScannedBlRecord(id) {
