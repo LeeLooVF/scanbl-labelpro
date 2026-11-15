@@ -22,20 +22,6 @@
     }
     .mono { font-family: 'JetBrains Mono', monospace; }
     .barcode { font-family: 'Libre Barcode 128', cursive; font-size: 36px; line-height: 1; }
-    @keyframes laser {
-      0%, 100% { top: 12%; opacity: 0.85; }
-      50% { top: 86%; opacity: 1; }
-    }
-    .laser-line {
-      position: absolute;
-      left: 6%;
-      right: 6%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, #06b6d4, #22d3ee, #06b6d4, transparent);
-      box-shadow: 0 0 12px #06b6d4, 0 0 24px #06b6d4;
-      animation: laser 2.6s ease-in-out infinite;
-      pointer-events: none;
-    }
     .offscreen-file-input {
       position: absolute;
       width: 1px;
@@ -83,7 +69,7 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between bg-[#090d16] text-slate-100 select-none">
 
-  <!-- Zone d'impression (Étiquettes thermiques OU Bon de Commande A4 PDF) -->
+  <!-- Zone d'impression -->
   <div id="realPrintArea"></div>
 
   <!-- Inputs fichiers globaux compatibles WebView Android -->
@@ -102,7 +88,7 @@
         <div>
           <div class="flex items-center gap-1.5">
             <h1 class="font-extrabold text-sm tracking-tight text-white">OptiStock <span class="text-cyan-400 font-semibold">Enterprise</span></h1>
-            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.1</span>
+            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.2</span>
           </div>
           <p class="text-[10px] text-slate-400">Traçabilité Réception & Approvisionnement</p>
         </div>
@@ -119,8 +105,6 @@
 
       <!-- ==================== ONGLET 0 : ÉCRAN D'ACCUEIL PRO ==================== -->
       <section id="tab-accueil" class="space-y-3.5">
-
-        <!-- Bandeau Statut Opérationnel & KPI -->
         <div class="p-4 rounded-xl bg-[#0f172a] border border-slate-800 space-y-3 shadow-sm">
           <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
             <div>
@@ -157,16 +141,12 @@
           </div>
         </div>
 
-        <!-- Modules Métier Principaux -->
         <div class="space-y-2.5">
           <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Modules d'Exploitation</div>
 
-          <!-- MODULE 1 : SCAN BL & ÉTIQUETTES -->
           <button type="button" onclick="switchTab('scanner')" class="w-full p-3.5 rounded-xl bg-[#0f172a] hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-left flex items-center justify-between active:scale-[0.99] transition shadow-sm">
             <div class="flex items-center gap-3.5">
-              <div class="w-11 h-11 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-sm mono">
-                OCR
-              </div>
+              <div class="w-11 h-11 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-sm mono">OCR</div>
               <div>
                 <div class="flex items-center gap-2">
                   <h3 class="text-sm font-bold text-white">Numérisation Bon de Livraison</h3>
@@ -178,12 +158,9 @@
             <span class="text-slate-500 text-sm font-bold">›</span>
           </button>
 
-          <!-- MODULE 2 : COMMANDE PRODUITS & EXPORT PDF -->
           <button type="button" onclick="switchTab('commande')" class="w-full p-3.5 rounded-xl bg-[#0f172a] hover:bg-slate-900 border border-slate-800 hover:border-amber-500/50 text-left flex items-center justify-between active:scale-[0.99] transition shadow-sm">
             <div class="flex items-center gap-3.5">
-              <div class="w-11 h-11 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-sm mono">
-                CMD
-              </div>
+              <div class="w-11 h-11 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-sm mono">CMD</div>
               <div>
                 <div class="flex items-center gap-2">
                   <h3 class="text-sm font-bold text-white">Référentiel & Bon de Commande</h3>
@@ -195,12 +172,9 @@
             <span class="text-slate-500 text-sm font-bold">›</span>
           </button>
 
-          <!-- MODULE 3 : ÉTAT DES SERVICES, CONFIGURATION & APK -->
           <button type="button" onclick="switchTab('reglages')" class="w-full p-3.5 rounded-xl bg-[#0f172a] hover:bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-left flex items-center justify-between active:scale-[0.99] transition shadow-sm">
             <div class="flex items-center gap-3.5">
-              <div class="w-11 h-11 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-sm mono">
-                SYS
-              </div>
+              <div class="w-11 h-11 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-sm mono">SYS</div>
               <div>
                 <h3 class="text-sm font-bold text-white">État des Services & Paramètres</h3>
                 <p class="text-[11px] text-slate-400 mt-0.5">Formats d'étiquettes sur-mesure, diagnostic Cloud & version</p>
@@ -210,11 +184,10 @@
           </button>
         </div>
 
-        <!-- Console de Maintenance & Déploiement Rapide -->
         <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between text-[11px]">
             <span class="font-bold uppercase tracking-wider text-slate-400">Maintenance & Déploiement</span>
-            <span class="mono text-slate-400">Build v3.1.0-prod</span>
+            <span class="mono text-slate-400">Build v3.2.0-prod</span>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -232,7 +205,7 @@
         </div>
       </section>
 
-      <!-- ==================== ONGLET COMMANDE : LISTE EN LIGNE SANS IMAGES ==================== -->
+      <!-- ==================== ONGLET COMMANDE : LIGNES SANS IMAGE (NOMS ENTIERS SUR 2 LIGNES) ==================== -->
       <section id="tab-commande" class="hidden space-y-3">
         <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between">
@@ -245,13 +218,11 @@
             </button>
           </div>
 
-          <!-- Recherche -->
           <div class="relative">
             <input id="kitchenSearchInput" type="text" oninput="renderKitchen()" placeholder="Filtrer par désignation, conditionnement ou catégorie..." class="w-full pl-3 pr-8 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-amber-400" />
             <button type="button" onclick="document.getElementById('kitchenSearchInput').value=''; renderKitchen();" class="absolute right-2.5 top-2 text-slate-500 text-xs">✕</button>
           </div>
 
-          <!-- Filtres Catégories -->
           <div class="flex gap-1.5 overflow-x-auto pb-1 text-[11px] font-semibold">
             <button type="button" onclick="setKitchenCategory('ALL')" id="kcat-ALL" class="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 whitespace-nowrap font-bold">Tous</button>
             <button type="button" onclick="setKitchenCategory('Viandes & Poissons')" id="kcat-Viandes & Poissons" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">Viandes & Poissons</button>
@@ -263,10 +234,8 @@
           </div>
         </div>
 
-        <!-- Liste des produits en ligne (SANS IMAGE) -->
         <div id="kitchenListContainer" class="space-y-1.5"></div>
 
-        <!-- Barre d'export PDF -->
         <div class="p-3.5 rounded-xl bg-[#0f172a] border border-amber-500/40 space-y-2.5 sticky bottom-2 z-20 shadow-2xl">
           <div class="flex items-center justify-between text-xs">
             <div>
@@ -281,52 +250,31 @@
         </div>
       </section>
 
-      <!-- ==================== ONGLET 1 : SCANNER CAMÉRA ==================== -->
+      <!-- ==================== ONGLET 1 : SCANNER (SANS PREVIEW VIDÉO) ==================== -->
       <section id="tab-scanner" class="hidden space-y-3">
-        <div class="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 aspect-[3/4] flex flex-col justify-between shadow-inner">
-          <video id="cameraStream" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover hidden"></video>
-          <img id="capturedPreview" alt="Aperçu BL" class="absolute inset-0 w-full h-full object-contain bg-slate-950 hidden" />
-
-          <div id="cameraPlaceholder" class="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
-            <div class="w-14 h-14 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-2xl mb-3">📷</div>
-            <p class="text-sm font-bold text-slate-200">Numérisation de Bon de Livraison</p>
-            <p class="text-xs text-slate-400 mt-1 max-w-xs">Les produits scannés prépareront vos étiquettes DLC et s'ajouteront automatiquement à votre catalogue de commande.</p>
-            <button type="button" onclick="startLiveCamera(true)" class="mt-4 px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-xs font-bold active:scale-95 transition">
-              Activer le viseur caméra direct
-            </button>
+        <div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center space-y-4 shadow-xl">
+          <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-3xl mx-auto">📷</div>
+          <div class="space-y-1">
+            <h3 class="text-base font-bold text-white">Numérisation Bon de Livraison</h3>
+            <p class="text-xs text-slate-400">Sélectionnez une méthode de capture pour extraire automatiquement les DLC et alimenter votre catalogue de commande.</p>
           </div>
 
-          <div class="laser-line"></div>
-          <div class="relative z-20 p-3 flex justify-between items-center bg-gradient-to-b from-black/70 to-transparent">
-            <span class="text-[10px] mono px-2 py-0.5 rounded bg-black/70 text-cyan-300 border border-cyan-500/30">GEMINI 3.0 FLASH • OCR</span>
-            <button type="button" onclick="syncFromCloud(true)" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-300 active:scale-95">
-              🔄 Sync Cloud
+          <div class="grid grid-cols-2 gap-3 pt-2">
+            <button type="button" onclick="openGalleryPicker()" class="p-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 flex flex-col items-center gap-1.5 text-xs text-slate-200 active:scale-95 transition">
+              <span class="text-xl">🖼️</span>
+              <span class="font-bold">Photo / Fichier</span>
+            </button>
+            <button type="button" onclick="openNativeCameraPicker()" class="p-3.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 flex flex-col items-center gap-1.5 text-xs text-cyan-300 active:scale-95 transition">
+              <span class="text-xl">📸</span>
+              <span class="font-extrabold">Appareil HD</span>
             </button>
           </div>
+        </div>
 
-          <div id="scanLoadingOverlay" class="hidden absolute inset-0 z-30 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-            <div class="w-11 h-11 rounded-full border-4 border-cyan-400 border-t-transparent animate-spin mb-3"></div>
-            <p class="text-sm font-bold text-white">Analyse Gemini 3.0 Flash en cours...</p>
-            <p class="text-xs text-cyan-300 mt-1 mono">Extraction des lignes, DLC et conditionnements...</p>
-          </div>
-
-          <div class="relative z-20 p-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex items-center justify-around">
-            <button type="button" onclick="openGalleryPicker()" class="flex flex-col items-center gap-1 text-[11px] text-slate-300 active:scale-95 transition">
-              <div class="w-11 h-11 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-base shadow">🖼️</div>
-              <span>Photo / Fichier</span>
-            </button>
-
-            <button type="button" onclick="triggerCapture()" class="p-1.5 rounded-full border-4 border-cyan-400 bg-cyan-500/20 active:scale-95 transition flex items-center justify-center shadow-lg shadow-cyan-500/30">
-              <div class="w-15 h-15 px-4 py-5 rounded-full bg-gradient-to-tr from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-xs tracking-wider">
-                SCAN
-              </div>
-            </button>
-
-            <button type="button" onclick="openNativeCameraPicker()" class="flex flex-col items-center gap-1 text-[11px] text-slate-300 active:scale-95 transition">
-              <div class="w-11 h-11 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-base shadow">📸</div>
-              <span>Appareil HD</span>
-            </button>
-          </div>
+        <div id="scanLoadingOverlay" class="hidden p-6 rounded-xl bg-[#0f172a] border border-cyan-500/40 text-center space-y-3">
+          <div class="w-10 h-10 rounded-full border-4 border-cyan-400 border-t-transparent animate-spin mx-auto"></div>
+          <p class="text-sm font-bold text-white">Analyse Gemini 3.0 Flash en cours...</p>
+          <p class="text-xs text-cyan-300 mono">Extraction des lignes, lots et conditionnements...</p>
         </div>
 
         <canvas id="captureCanvas" class="hidden"></canvas>
@@ -377,7 +325,7 @@
         <div id="historyListContainer" class="space-y-2"></div>
       </section>
 
-      <!-- ==================== ONGLET 4 : SERVICES, ROULEAU SUR-MESURE & APK ==================== -->
+      <!-- ==================== ONGLET 4 : SERVICES & RÉGLAGES ==================== -->
       <section id="tab-reglages" class="hidden space-y-3">
         <div class="p-4 rounded-xl bg-[#0f172a] border border-slate-800 space-y-3">
           <div class="flex items-center justify-between">
@@ -423,7 +371,6 @@
           </div>
         </div>
 
-        <!-- État de tous les services -->
         <div class="p-4 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-extrabold uppercase tracking-wider text-emerald-400">État des Services Cloud</h3>
@@ -448,13 +395,12 @@
           </div>
         </div>
 
-        <!-- Version, Actualisation & Téléchargement du dernier APK GitHub -->
         <div class="p-4 rounded-xl bg-[#0f172a] border border-slate-800 space-y-3">
           <h3 class="text-xs font-extrabold uppercase tracking-wider text-cyan-400">Maintenance & Téléchargement APK</h3>
 
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Version installée</span>
-            <span class="mono font-bold text-white">OptiStock Pro v3.1.0 (SDK 34)</span>
+            <span class="mono font-bold text-white">OptiStock Pro v3.2.0 (SDK 34)</span>
           </div>
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Dernière synchro Cloud</span>
@@ -504,7 +450,7 @@
     </nav>
   </div>
 
-  <!-- Modal Ajout / Modification d'un Produit dans Commande (Sans Image) -->
+  <!-- Modal Ajout / Modification d'un Produit dans Commande -->
   <div id="kitchenModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-700 rounded-xl max-w-sm w-full p-4 space-y-3">
       <h3 id="kModalTitle" class="text-sm font-extrabold text-white">Ajouter un produit au référentiel</h3>
@@ -540,7 +486,7 @@
     </div>
   </div>
 
-  <!-- Modal Ajout / Édition d'étiquette BL -->
+  <!-- Modal Étiquette BL -->
   <div id="itemModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-700 rounded-xl max-w-sm w-full p-4 space-y-3">
       <h3 class="text-sm font-extrabold text-white">Ajouter / Modifier une étiquette</h3>
@@ -576,7 +522,7 @@
     </div>
   </div>
 
-  <!-- Tiroir des Sorties DLC -->
+  <!-- Tiroir Sorties DLC -->
   <div id="sortieDrawer" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-end">
     <div class="bg-slate-900 border-l border-slate-800 w-full max-w-sm h-full flex flex-col justify-between p-4">
       <div class="space-y-3 overflow-y-auto">
@@ -601,12 +547,12 @@
   <div id="toastBox" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-slate-900/95 border border-cyan-500/50 text-xs font-semibold text-white shadow-xl"></div>
 
   <script>
-    // ==================== ÉTAT GLOBAL CLOUD (AUCUN PRODUIT DE BASE) ====================
+    // ==================== ÉTAT GLOBAL CLOUD & SYNCHRO INTELLIGENTE ====================
     let appState = {
       verifyItems: [],
       historyItems: [],
       sortieIds: [],
-      kitchenProducts: [], // Vierge par défaut : alimenté par les Scans BL ou manuellement
+      kitchenProducts: [],
       kitchenCart: {}
     };
 
@@ -616,7 +562,6 @@
     let customWidth = parseInt(localStorage.getItem('optistock_custom_w')) || 55;
     let customHeight = parseInt(localStorage.getItem('optistock_custom_h')) || 35;
     let githubRepo = localStorage.getItem('optistock_github_repo') || '';
-    let mediaStream = null;
 
     window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('customRollWidth').value = customWidth;
@@ -635,11 +580,8 @@
       setTimeout(() => box.classList.add('hidden'), 2800);
     }
 
-    // ==================== FORMATS DE ROULEAU + SUR-MESURE ====================
     function getRollDimensions() {
-      if (rollFormat === 'CUSTOM') {
-        return { w: customWidth || 55, h: customHeight || 35 };
-      }
+      if (rollFormat === 'CUSTOM') return { w: customWidth || 55, h: customHeight || 35 };
       const parts = (rollFormat || '50x30').split('x');
       return { w: parseInt(parts[0]) || 50, h: parseInt(parts[1]) || 30 };
     }
@@ -647,8 +589,7 @@
     function changeRollFormat(val, notify = true) {
       rollFormat = val;
       localStorage.setItem('optistock_roll_format', val);
-      const customBox = document.getElementById('customRollBox');
-      customBox.classList.toggle('hidden', val !== 'CUSTOM');
+      document.getElementById('customRollBox').classList.toggle('hidden', val !== 'CUSTOM');
       const { w, h } = getRollDimensions();
       document.getElementById('activeRollDimBadge').textContent = `${w} × ${h} mm`;
       document.getElementById('labelFormatTitleBadge').textContent = `${w}×${h} mm`;
@@ -659,24 +600,36 @@
     function applyCustomRollDimensions() {
       const w = Math.max(15, Math.min(210, parseInt(document.getElementById('customRollWidth').value) || 55));
       const h = Math.max(10, Math.min(300, parseInt(document.getElementById('customRollHeight').value) || 35));
-      customWidth = w;
-      customHeight = h;
+      customWidth = w; customHeight = h;
       localStorage.setItem('optistock_custom_w', w);
       localStorage.setItem('optistock_custom_h', h);
       changeRollFormat('CUSTOM', true);
     }
 
-    // ==================== SYNCHRONISATION CLOUD (/state) ====================
+    // ==================== SYNCHRONISATION CLOUD AVEC FUSION INTELLIGENTE ====================
     async function syncFromCloud(manual = false) {
       try {
         const res = await fetch('/state', { method: 'GET', headers: { 'Accept': 'application/json' } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
+        
         appState.verifyItems = Array.isArray(data.verifyItems) ? data.verifyItems : [];
         appState.historyItems = Array.isArray(data.historyItems) ? data.historyItems : [];
         appState.sortieIds = Array.isArray(data.sortieIds) ? data.sortieIds : [];
-        appState.kitchenProducts = Array.isArray(data.kitchenProducts) ? data.kitchenProducts : [];
-        appState.kitchenCart = (data.kitchenCart && typeof data.kitchenCart === 'object') ? data.kitchenCart : {};
+
+        // Fusion intelligente pour ne jamais perdre les produits ajoutés localement
+        if (Array.isArray(data.kitchenProducts)) {
+          const map = new Map();
+          // Priorité aux produits déjà présents localement
+          appState.kitchenProducts.forEach(p => map.set(p.id, p));
+          data.kitchenProducts.forEach(p => { if (!map.has(p.id)) map.set(p.id, p); });
+          appState.kitchenProducts = Array.from(map.values());
+        }
+
+        if (data.kitchenCart && typeof data.kitchenCart === 'object') {
+          appState.kitchenCart = { ...data.kitchenCart, ...appState.kitchenCart };
+        }
+
         document.getElementById('lastSyncTimeDisplay').textContent = new Date().toLocaleTimeString('fr-FR');
         document.getElementById('statusStateApi').textContent = 'EN LIGNE • KV SYNC';
         document.getElementById('homeQuickStatus').textContent = '● CLOUD SYNCHRONISÉ';
@@ -707,25 +660,17 @@
       }
     }
 
-    // ==================== NAVIGATION PRINCIPALE ====================
     function switchTab(tab) {
       ['accueil', 'commande', 'scanner', 'verifier', 'historique', 'reglages'].forEach(t => {
         const el = document.getElementById('tab-' + t);
         if (el) el.classList.toggle('hidden', t !== tab);
         const navBtn = document.getElementById('nav-' + t);
         if (navBtn) {
-          if (t === tab) {
-            navBtn.classList.add('text-cyan-400', 'font-bold');
-            navBtn.classList.remove('text-slate-400');
-          } else {
-            navBtn.classList.remove('text-cyan-400', 'font-bold');
-            navBtn.classList.add('text-slate-400');
-          }
+          navBtn.classList.toggle('text-cyan-400', t === tab);
+          navBtn.classList.toggle('font-bold', t === tab);
+          navBtn.classList.toggle('text-slate-400', t !== tab);
         }
       });
-      if (tab === 'scanner') {
-        startLiveCamera(false);
-      }
       renderAll();
     }
 
@@ -753,7 +698,7 @@
       }
     }
 
-    // ==================== MODULE COMMANDE EN LIGNES (SANS IMAGE) ====================
+    // ==================== MODULE COMMANDE (NOM ENTIER SUR 2 LIGNES MAX) ====================
     function setKitchenCategory(cat) {
       currentKitchenCategory = cat;
       ['ALL', 'Viandes & Poissons', 'Fruits & Légumes', 'Crèmerie & Frais', 'Épicerie & Sec', 'Boissons', 'Hygiène & Emballage'].forEach(c => {
@@ -797,21 +742,16 @@
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-1.5 flex-wrap">
                 <span class="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-[10px] mono font-bold text-amber-300">${prod.unit || 'Colis'}</span>
-                <span class="text-[10px] text-slate-400 truncate">${prod.category || 'Général'}</span>
+                <span class="text-[10px] text-slate-400">${prod.category || 'Général'}</span>
               </div>
-              <h4 class="text-xs font-bold text-white truncate mt-1">${prod.name}</h4>
+              <!-- Nom complet sur 2 lignes max sans troncature brutale -->
+              <h4 class="text-xs font-bold text-white line-clamp-2 break-words mt-1 leading-snug">${prod.name}</h4>
             </div>
 
             <div class="flex items-center gap-1.5 shrink-0">
-              <!-- Boutons Modifier & Supprimer le produit -->
-              <button type="button" onclick="openKitchenModal('${prod.id}')" title="Modifier ce produit" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center justify-center">
-                ✏️
-              </button>
-              <button type="button" onclick="deleteKitchenProduct('${prod.id}')" title="Supprimer ce produit" class="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center">
-                🗑️
-              </button>
+              <button type="button" onclick="openKitchenModal('${prod.id}')" title="Modifier" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center justify-center">✏️</button>
+              <button type="button" onclick="deleteKitchenProduct('${prod.id}')" title="Supprimer" class="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center">🗑️</button>
 
-              <!-- Sélecteur de quantité à commander -->
               <div class="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 ml-1">
                 <button type="button" onclick="updateKitchenQty('${prod.id}', -1)" class="w-7 h-7 rounded bg-slate-800 text-white font-black text-xs">-</button>
                 <span class="w-7 text-center mono text-xs font-black ${qty > 0 ? 'text-amber-400' : 'text-slate-500'}">${qty}</span>
@@ -870,29 +810,16 @@
     function saveKitchenProductModal() {
       const editId = document.getElementById('kModalEditId').value;
       const name = document.getElementById('kModalName').value.trim();
-      if (!name) {
-        showToast('⚠️ Veuillez saisir la désignation du produit');
-        return;
-      }
+      if (!name) { showToast('⚠️ Veuillez saisir la désignation'); return; }
       const unit = document.getElementById('kModalUnit').value.trim() || 'Colis';
       const category = document.getElementById('kModalCat').value;
 
       if (editId) {
         const prod = appState.kitchenProducts.find(p => p.id === editId);
-        if (prod) {
-          prod.name = name;
-          prod.unit = unit;
-          prod.category = category;
-        }
+        if (prod) { prod.name = name; prod.unit = unit; prod.category = category; }
         showToast('✏️ Produit mis à jour');
       } else {
-        const newProd = {
-          id: 'KP-' + Date.now(),
-          name,
-          unit,
-          category
-        };
-        appState.kitchenProducts.unshift(newProd);
+        appState.kitchenProducts.unshift({ id: 'KP-' + Date.now(), name, unit, category });
         showToast('✅ Produit enregistré');
       }
       closeKitchenModal();
@@ -901,10 +828,7 @@
 
     function exportKitchenOrderPDF() {
       const ordered = appState.kitchenProducts.filter(p => (appState.kitchenCart[p.id] || 0) > 0);
-      if (ordered.length === 0) {
-        showToast('⚠️ Sélectionnez au moins 1 produit à commander');
-        return;
-      }
+      if (ordered.length === 0) { showToast('⚠️ Sélectionnez au moins 1 produit à commander'); return; }
 
       document.getElementById('dynamicPrintStyle').innerHTML = `@page { size: A4 portrait; margin: 10mm; }`;
       const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -934,7 +858,6 @@
               LIGNES: ${ordered.length}
             </div>
           </div>
-
           <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
             <thead>
               <tr style="background:#f1f5f9;border-bottom:2px solid #0f172a;text-align:left;">
@@ -946,72 +869,22 @@
                 <th style="padding:8px;text-align:center;">Reçu</th>
               </tr>
             </thead>
-            <tbody>
-              ${rowsHtml}
-            </tbody>
+            <tbody>${rowsHtml}</tbody>
           </table>
         </div>
       `;
-
       window.print();
       setTimeout(() => changeRollFormat(rollFormat, false), 1500);
     }
 
-    // ==================== CAMÉRA, FICHIERS & SCAN GEMINI 3.0 ====================
+    // ==================== SCAN BL (SANS PRÉVISUALISATION VIDÉO) ====================
     function openGalleryPicker() {
       const input = document.getElementById('fileInputGallery');
-      input.value = '';
-      input.click();
+      input.value = ''; input.click();
     }
-
     function openNativeCameraPicker() {
       const input = document.getElementById('fileInputCamera');
-      input.value = '';
-      input.click();
-    }
-
-    async function startLiveCamera(fallbackToPicker = true) {
-      try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Caméra WebRTC non supportée');
-        }
-        if (mediaStream) {
-          mediaStream.getTracks().forEach(t => t.stop());
-        }
-        try {
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-            audio: false
-          });
-        } catch (e1) {
-          mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        }
-        const video = document.getElementById('cameraStream');
-        video.srcObject = mediaStream;
-        await video.play();
-        video.classList.remove('hidden');
-        document.getElementById('cameraPlaceholder').classList.add('hidden');
-        document.getElementById('capturedPreview').classList.add('hidden');
-      } catch (err) {
-        if (fallbackToPicker) openNativeCameraPicker();
-      }
-    }
-
-    function triggerCapture() {
-      const video = document.getElementById('cameraStream');
-      if (mediaStream && !video.classList.contains('hidden') && video.videoWidth > 0) {
-        const canvas = document.getElementById('captureCanvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-        const preview = document.getElementById('capturedPreview');
-        preview.src = dataUrl;
-        preview.classList.remove('hidden');
-        sendImageToGemini(dataUrl);
-      } else {
-        openNativeCameraPicker();
-      }
+      input.value = ''; input.click();
     }
 
     function handleImageFile(event) {
@@ -1029,15 +902,9 @@
             if (w > h) { h = Math.round(h * (maxDim / w)); w = maxDim; }
             else { w = Math.round(w * (maxDim / h)); h = maxDim; }
           }
-          canvas.width = w;
-          canvas.height = h;
+          canvas.width = w; canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
-          const preview = document.getElementById('capturedPreview');
-          preview.src = compressedDataUrl;
-          preview.classList.remove('hidden');
-          document.getElementById('cameraPlaceholder').classList.add('hidden');
-          sendImageToGemini(compressedDataUrl);
+          sendImageToGemini(canvas.toDataURL('image/jpeg', 0.82));
         };
         img.src = e.target.result;
       };
@@ -1068,13 +935,11 @@
         }
 
         let addedToCatalog = 0;
-
         items.forEach((it, idx) => {
           const cleanName = (it.name || 'Article sans nom').trim();
           const cleanUnit = (it.unit || 'Colis').trim();
           const cleanCat = it.category || 'Épicerie & Sec';
 
-          // 1. Ajout dans la file d'étiquettes à vérifier
           appState.verifyItems.push({
             id: 'V-' + Date.now() + '-' + idx,
             name: cleanName,
@@ -1086,7 +951,6 @@
             qty: 1
           });
 
-          // 2. Ajout automatique dans le référentiel Commande (sans doublon sur le nom)
           const existingProd = appState.kitchenProducts.find(
             p => p.name.toLowerCase() === cleanName.toLowerCase()
           );
@@ -1098,14 +962,12 @@
               category: cleanCat
             });
             addedToCatalog++;
-          } else if (cleanUnit && existingProd.unit === 'Colis') {
-            existingProd.unit = cleanUnit;
           }
         });
 
         await pushToCloud();
         overlay.classList.add('hidden');
-        showToast(`✅ ${items.length} réf. extraites (+${addedToCatalog} au catalogue commande)`);
+        showToast(`✅ ${items.length} réf. extraites (+${addedToCatalog} au catalogue)`);
         switchTab('verifier');
       } catch (err) {
         overlay.classList.add('hidden');
@@ -1113,7 +975,7 @@
       }
     }
 
-    // ==================== VÉRIFICATION & ÉTIQUETTES BL ====================
+    // ==================== VÉRIFICATION & ÉTIQUETTES ====================
     function formatDateFR(isoDate) {
       if (!isoDate) return '--/--/----';
       const parts = isoDate.split('-');
@@ -1121,10 +983,8 @@
     }
 
     function getDaysDiff(dlcIso) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const target = new Date(dlcIso);
-      target.setHours(0, 0, 0, 0);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const target = new Date(dlcIso); target.setHours(0, 0, 0, 0);
       return Math.round((target - today) / (1000 * 60 * 60 * 24));
     }
 
@@ -1137,21 +997,15 @@
       document.getElementById('verifyTotalLabels').textContent = totalLabels;
 
       const navBadge = document.getElementById('badgeVerifyNav');
-      if (totalRefs > 0) {
-        navBadge.textContent = totalRefs;
-        navBadge.classList.remove('hidden');
-      } else {
-        navBadge.classList.add('hidden');
-      }
+      navBadge.textContent = totalRefs;
+      navBadge.classList.toggle('hidden', totalRefs === 0);
 
       if (totalRefs === 0) {
         container.innerHTML = `
           <div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center space-y-3">
             <p class="text-sm font-bold text-white">Aucune étiquette en attente</p>
             <p class="text-xs text-slate-400">Scannez un BL ou ajoutez manuellement une étiquette.</p>
-            <button type="button" onclick="switchTab('scanner')" class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-bold text-xs">
-              Scanner un BL
-            </button>
+            <button type="button" onclick="switchTab('scanner')" class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-bold text-xs">Scanner un BL</button>
           </div>`;
         return;
       }
@@ -1168,7 +1022,6 @@
               <div class="text-xs font-extrabold text-amber-400 mono">${formatDateFR(item.dlc)}</div>
             </div>
           </div>
-
           <div class="flex items-center justify-between text-xs text-slate-300 bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800/80">
             <span>Reçu le : <strong class="mono text-white">${formatDateFR(item.receivedDate)}</strong></span>
             <div class="flex items-center gap-2">
@@ -1177,14 +1030,9 @@
               <button type="button" onclick="changeVerifyQty('${item.id}', 1)" class="w-7 h-7 rounded bg-slate-800 font-bold">+</button>
             </div>
           </div>
-
           <div class="grid grid-cols-2 gap-2 pt-0.5">
-            <button type="button" onclick="openItemModal('${item.id}')" class="py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
-              ✏️ Éditer
-            </button>
-            <button type="button" onclick="deleteVerifyItem('${item.id}')" class="py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-semibold text-rose-300">
-              🗑️ Supprimer l'étiquette
-            </button>
+            <button type="button" onclick="openItemModal('${item.id}')" class="py-1.5 rounded-lg bg-slate-800 text-xs font-semibold text-slate-200">✏️ Éditer</button>
+            <button type="button" onclick="deleteVerifyItem('${item.id}')" class="py-1.5 rounded-lg bg-rose-500/15 border border-rose-500/30 text-xs font-semibold text-rose-300">🗑️ Supprimer</button>
           </div>
         </div>
       `).join('');
@@ -1196,7 +1044,6 @@
       it.qty = Math.max(1, (parseInt(it.qty) || 1) + delta);
       pushToCloud();
     }
-
     function deleteVerifyItem(id) {
       appState.verifyItems = appState.verifyItems.filter(x => x.id !== id);
       pushToCloud();
@@ -1204,43 +1051,24 @@
     }
 
     async function printAllVerifyLabels() {
-      if (appState.verifyItems.length === 0) {
-        showToast('Aucune étiquette à imprimer');
-        return;
-      }
+      if (appState.verifyItems.length === 0) { showToast('Aucune étiquette à imprimer'); return; }
       changeRollFormat(rollFormat, false);
       const printArea = document.getElementById('realPrintArea');
       let html = '';
       appState.verifyItems.forEach(item => {
         const count = Math.max(1, parseInt(item.qty) || 1);
-        for (let i = 0; i < count; i++) {
-          html += buildPrintableLabelHTML(item);
-        }
+        for (let i = 0; i < count; i++) { html += buildPrintableLabelHTML(item); }
       });
       printArea.innerHTML = html;
 
       appState.verifyItems.forEach(item => {
-        appState.historyItems.unshift({
-          ...item,
-          id: 'H-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-          printedAt: new Date().toISOString()
-        });
+        appState.historyItems.unshift({ ...item, id: 'H-' + Date.now() + '-' + Math.floor(Math.random() * 1000), printedAt: new Date().toISOString() });
       });
       appState.verifyItems = [];
       await pushToCloud();
-
       window.print();
-      showToast('🖨️ Impression lancée • Vérifier a été vidé');
+      showToast('🖨️ Impression lancée');
       switchTab('historique');
-    }
-
-    function printSingleHistoryLabel(id) {
-      const item = appState.historyItems.find(x => x.id === id);
-      if (!item) return;
-      changeRollFormat(rollFormat, false);
-      const printArea = document.getElementById('realPrintArea');
-      printArea.innerHTML = buildPrintableLabelHTML(item);
-      window.print();
     }
 
     function buildPrintableLabelHTML(item) {
@@ -1264,8 +1092,7 @@
     function setHistoryFilter(filter) {
       currentHistoryFilter = filter;
       ['all', 'expired', 'short', 'valid'].forEach(f => {
-        const btn = document.getElementById('filter-' + f);
-        btn.className = (f === filter) ? 'py-1.5 rounded bg-cyan-500 text-slate-950' : 'py-1.5 rounded text-slate-400';
+        document.getElementById('filter-' + f).className = (f === filter) ? 'py-1.5 rounded bg-cyan-500 text-slate-950 font-bold' : 'py-1.5 rounded text-slate-400';
       });
       renderHistory();
     }
@@ -1273,78 +1100,52 @@
     function renderHistory() {
       const container = document.getElementById('historyListContainer');
       const query = (document.getElementById('historySearchInput')?.value || '').toLowerCase().trim();
-
-      let countAll = appState.historyItems.length;
-      let countExpired = 0, countShort = 0, countValid = 0;
+      let counts = { all: appState.historyItems.length, expired: 0, short: 0, valid: 0 };
 
       appState.historyItems.forEach(item => {
         const diff = getDaysDiff(item.dlc);
-        if (diff < 0) countExpired++;
-        else if (diff <= 7) countShort++;
-        else countValid++;
+        if (diff < 0) counts.expired++; else if (diff <= 7) counts.short++; else counts.valid++;
       });
 
-      document.getElementById('historyTotalCount').textContent = countAll;
-      document.getElementById('filter-all').textContent = `Toutes (${countAll})`;
-      document.getElementById('filter-expired').textContent = `Passées (${countExpired})`;
-      document.getElementById('filter-short').textContent = `Courtes (${countShort})`;
-      document.getElementById('filter-valid').textContent = `Valides (${countValid})`;
+      document.getElementById('historyTotalCount').textContent = counts.all;
+      document.getElementById('filter-all').textContent = `Toutes (${counts.all})`;
+      document.getElementById('filter-expired').textContent = `Passées (${counts.expired})`;
+      document.getElementById('filter-short').textContent = `Courtes (${counts.short})`;
+      document.getElementById('filter-valid').textContent = `Valides (${counts.valid})`;
 
       const filtered = appState.historyItems.filter(item => {
         const diff = getDaysDiff(item.dlc);
         if (currentHistoryFilter === 'expired' && diff >= 0) return false;
         if (currentHistoryFilter === 'short' && (diff < 0 || diff > 7)) return false;
         if (currentHistoryFilter === 'valid' && diff <= 7) return false;
-        if (query) return `${item.name} ${item.lot} ${item.blNumber}`.toLowerCase().includes(query);
+        if (query && !`${item.name} ${item.lot} ${item.blNumber}`.toLowerCase().includes(query)) return false;
         return true;
       });
 
       if (filtered.length === 0) {
-        container.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucune étiquette dans cette catégorie.</div>`;
+        container.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucune étiquette trouvée.</div>`;
         return;
       }
 
       container.innerHTML = filtered.map(item => {
         const diff = getDaysDiff(item.dlc);
         const inSortie = appState.sortieIds.includes(item.id);
-        let statusBadge = '';
-        if (diff < 0) {
-          statusBadge = `<span class="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10px] font-bold">DATE PASSÉE (${diff}j)</span>`;
-        } else if (diff <= 7) {
-          statusBadge = `<span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">DATE COURTE (J-${diff})</span>`;
-        } else {
-          statusBadge = `<span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold">VALIDE (+${diff}j)</span>`;
-        }
-
+        let badge = diff < 0 ? `<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px] font-bold">PÉRIMÉ (${diff}j)</span>` : (diff <= 7 ? `<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">COURT (J-${diff})</span>` : `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">VALIDE (+${diff}j)</span>`);
         return `
           <div class="p-3 rounded-xl bg-[#0f172a] border ${inSortie ? 'border-rose-500/60' : 'border-slate-800'} space-y-2">
             <div class="flex items-start justify-between gap-2">
-              <div class="space-y-1">
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  ${statusBadge}
-                  <span class="text-[10px] mono text-slate-400">${item.blNumber || ''}</span>
-                  ${inSortie ? '<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 text-[9px] font-bold">DANS LISTE SORTIE</span>' : ''}
-                </div>
-                <h4 class="text-sm font-bold text-white pt-0.5">${item.name}</h4>
+              <div>
+                <div class="flex items-center gap-1.5">${badge}<span class="text-[10px] mono text-slate-400">${item.blNumber || ''}</span></div>
+                <h4 class="text-sm font-bold text-white mt-1">${item.name}</h4>
               </div>
               <div class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
-                <div class="text-[9px] text-slate-400 uppercase">DLC / DLUO</div>
+                <div class="text-[9px] text-slate-400 uppercase">DLC</div>
                 <div class="text-xs font-extrabold ${diff < 0 ? 'text-rose-400' : 'text-cyan-300'} mono">${formatDateFR(item.dlc)}</div>
               </div>
             </div>
-
-            <div class="flex items-center justify-between text-xs bg-slate-950/90 px-3 py-1.5 rounded-lg border border-slate-800/80">
-              <span class="text-slate-400">Reçu: <strong class="mono text-white">${formatDateFR(item.receivedDate)}</strong></span>
-              <span class="mono font-bold text-cyan-400">${item.lot}</span>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 pt-0.5">
-              <button type="button" onclick="printSingleHistoryLabel('${item.id}')" class="py-2 rounded-lg bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/50 text-cyan-200 font-bold text-xs">
-                🖨️ Sortir l'étiquette
-              </button>
-              <button type="button" onclick="toggleItemSortie('${item.id}')" class="py-2 rounded-lg ${inSortie ? 'bg-rose-600 text-white' : 'bg-slate-800 text-rose-300 border border-rose-500/30'} font-bold text-xs">
-                ${inSortie ? '↩️ Retirer de la sortie' : '📤 Sortir date passée'}
-              </button>
+            <div class="flex items-center justify-between text-xs bg-slate-950/90 px-3 py-1.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400">Lot : <strong class="mono text-white">${item.lot}</strong></span>
+              <button type="button" onclick="toggleItemSortie('${item.id}')" class="text-rose-400 font-bold hover:underline">${inSortie ? 'Retirer sortie' : '📤 Sortir date passée'}</button>
             </div>
           </div>
         `;
@@ -1352,21 +1153,15 @@
     }
 
     function toggleItemSortie(id) {
-      if (appState.sortieIds.includes(id)) {
-        appState.sortieIds = appState.sortieIds.filter(x => x !== id);
-      } else {
-        appState.sortieIds.push(id);
-      }
+      if (appState.sortieIds.includes(id)) appState.sortieIds = appState.sortieIds.filter(x => x !== id);
+      else appState.sortieIds.push(id);
       pushToCloud();
     }
 
     function moveAllExpiredToSortie() {
       let added = 0;
       appState.historyItems.forEach(item => {
-        if (getDaysDiff(item.dlc) < 0 && !appState.sortieIds.includes(item.id)) {
-          appState.sortieIds.push(item.id);
-          added++;
-        }
+        if (getDaysDiff(item.dlc) < 0 && !appState.sortieIds.includes(item.id)) { appState.sortieIds.push(item.id); added++; }
       });
       pushToCloud();
       toggleSortieDrawer(true);
@@ -1382,29 +1177,16 @@
       document.getElementById('sortieCountBadge').textContent = appState.sortieIds.length;
       const list = document.getElementById('sortieDrawerList');
       const items = appState.historyItems.filter(x => appState.sortieIds.includes(x.id));
-      if (items.length === 0) {
-        list.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Aucun produit dans la liste de retrait.</p>`;
-        return;
-      }
+      if (items.length === 0) { list.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Aucun produit dans la liste de retrait.</p>`; return; }
       list.innerHTML = items.map(item => `
         <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
           <div>
             <div class="text-xs font-bold text-white">${item.name}</div>
             <div class="text-[10px] mono text-rose-400">DLC: ${formatDateFR(item.dlc)} • ${item.lot}</div>
           </div>
-          <div class="flex gap-1">
-            <button type="button" onclick="toggleItemSortie('${item.id}')" class="px-2 py-1 rounded bg-slate-800 text-[10px]">↩️</button>
-            <button type="button" onclick="purgeHistoryItem('${item.id}')" class="px-2 py-1 rounded bg-rose-600/30 text-rose-300 text-[10px]">🗑️</button>
-          </div>
+          <button type="button" onclick="toggleItemSortie('${item.id}')" class="px-2 py-1 rounded bg-slate-800 text-[10px]">↩️</button>
         </div>
       `).join('');
-    }
-
-    function purgeHistoryItem(id) {
-      appState.historyItems = appState.historyItems.filter(x => x.id !== id);
-      appState.sortieIds = appState.sortieIds.filter(x => x !== id);
-      pushToCloud();
-      showToast('🗑️ Produit retiré définitivement');
     }
 
     function printSortieTicket() {
@@ -1415,14 +1197,12 @@
       printArea.innerHTML = `
         <div class="print-label-sheet" style="width:${w}mm;">
           <div style="font-weight:900;font-size:10pt;border-bottom:2px solid #000;margin-bottom:4px;">BORDEREAU RETRAIT DLC</div>
-          <div style="font-size:8pt;margin-bottom:6px;">Édité le ${new Date().toLocaleDateString('fr-FR')}</div>
           ${items.map(i => `<div style="font-size:8.5pt;border-bottom:1px dashed #999;padding:2px 0;"><b>${i.name}</b><br/>DLC: ${formatDateFR(i.dlc)} | ${i.lot}</div>`).join('')}
         </div>
       `;
       window.print();
     }
 
-    // ==================== MODAL AJOUT / ÉDITION ÉTIQUETTE BL ====================
     function openItemModal(id = null) {
       const today = new Date().toISOString().split('T')[0];
       if (id) {
@@ -1444,11 +1224,7 @@
       }
       document.getElementById('itemModal').classList.remove('hidden');
     }
-
-    function closeItemModal() {
-      document.getElementById('itemModal').classList.add('hidden');
-    }
-
+    function closeItemModal() { document.getElementById('itemModal').classList.add('hidden'); }
     function saveItemModal() {
       const id = document.getElementById('modalItemId').value;
       const name = document.getElementById('modalName').value.trim() || 'Article';
@@ -1461,53 +1237,31 @@
         const it = appState.verifyItems.find(x => x.id === id);
         if (it) Object.assign(it, { name, dlc, receivedDate, lot, qty });
       } else {
-        appState.verifyItems.push({
-          id: 'V-' + Date.now(),
-          name, dlc, receivedDate, lot, qty,
-          barcode: '3250390000000',
-          blNumber: 'MANUEL'
-        });
+        appState.verifyItems.push({ id: 'V-' + Date.now(), name, dlc, receivedDate, lot, qty, barcode: '3250390000000', blNumber: 'MANUEL' });
       }
       closeItemModal();
       pushToCloud();
     }
 
-    // ==================== SERVICES, MAINTENANCE & TÉLÉCHARGEMENT APK ====================
     function saveGithubRepo(val) {
       githubRepo = val.trim();
       localStorage.setItem('optistock_github_repo', githubRepo);
       showToast('🔗 Dépôt GitHub enregistré');
     }
-
     function downloadLatestApk() {
       const repo = (document.getElementById('githubRepoInput')?.value || githubRepo).trim();
-      if (!repo || !repo.includes('/')) {
-        switchTab('reglages');
-        showToast('⚠️ Renseignez votre dépôt GitHub (ex: LeeLooV/scanbl-labelpro) en bas des réglages');
-        return;
-      }
-      const url = `https://github.com/${repo}/releases/latest/download/OptiStock-Pro.apk`;
-      window.open(url, '_blank');
+      if (!repo || !repo.includes('/')) { switchTab('reglages'); showToast('⚠️ Renseignez votre dépôt GitHub'); return; }
+      window.open(`https://github.com/${repo}/releases/latest/download/OptiStock-Pro.apk`, '_blank');
     }
-
     async function testCloudHealth() {
       const start = performance.now();
       await syncFromCloud(false);
-      const ms = Math.round(performance.now() - start);
-      document.getElementById('statusStateApi').textContent = `EN LIGNE (${ms} ms)`;
-      showToast(`⚡ Tous les services sont en ligne (${ms} ms)`);
+      showToast(`⚡ Services en ligne (${Math.round(performance.now() - start)} ms)`);
     }
-
-    function softRefreshUI() {
-      syncFromCloud(true);
-    }
-
+    function softRefreshUI() { syncFromCloud(true); }
     async function hardForceRefresh() {
-      showToast('⚡ Purge du cache et rechargement complet...');
-      if ('caches' in window) {
-        const names = await caches.keys();
-        await Promise.all(names.map(n => caches.delete(n)));
-      }
+      showToast('⚡ Rechargement...');
+      if ('caches' in window) { const names = await caches.keys(); await Promise.all(names.map(n => caches.delete(n))); }
       setTimeout(() => window.location.reload(true), 500);
     }
   </script>
