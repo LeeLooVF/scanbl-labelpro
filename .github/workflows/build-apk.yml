@@ -1,8 +1,49 @@
-- name: 6. Application de l'icône et des permissions Android
+name: Build OptiStock Pro APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Récupération du code source
+        uses: actions/checkout@v4
+
+      - name: 2. Installation de Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 3. Installation de Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 4. Préparation du dossier web et installation Capacitor
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+          npm install
+
+      - name: 5. Génération et synchronisation du projet Android
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: 6. Application de l'icône et des permissions Android
         run: |
           sudo apt-get update && sudo apt-get install -y imagemagick
           
-          # Nettoyage des icônes adaptatives XML en double pour éviter le conflit "Duplicate resources"
           find android/app/src/main/res -name "ic_launcher*.xml" -delete
 
           if [ ! -f "icon.png" ]; then
@@ -102,4 +143,30 @@
           }
           EOF
           fi
-          
+
+      - name: 7. Configuration du SDK Android
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+          accept-android-sdk-licenses: true
+
+      - name: 8. Compilation de l'APK OptiStock Pro
+        working-directory: ./android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../OptiStock-Pro.apk
+
+      - name: 9. Publication dans Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OptiStock-Pro-APK
+          path: OptiStock-Pro.apk
+
+      - name: 10. Publication automatique sur GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "OptiStock Pro — Dernière Version APK"
+          files: OptiStock-Pro.apk
+          prerelease: false
