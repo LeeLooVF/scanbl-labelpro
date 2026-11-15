@@ -620,7 +620,6 @@
         // Fusion intelligente pour ne jamais perdre les produits ajoutés localement
         if (Array.isArray(data.kitchenProducts)) {
           const map = new Map();
-          // Priorité aux produits déjà présents localement
           appState.kitchenProducts.forEach(p => map.set(p.id, p));
           data.kitchenProducts.forEach(p => { if (!map.has(p.id)) map.set(p.id, p); });
           appState.kitchenProducts = Array.from(map.values());
@@ -826,11 +825,11 @@
       pushToCloud();
     }
 
-    function exportKitchenOrderPDF() {
+    // EXPORT PDF ROBUSTE AVEC CAPACITOR PRINT ET FALLBACK WEB PRINT
+    async function exportKitchenOrderPDF() {
       const ordered = appState.kitchenProducts.filter(p => (appState.kitchenCart[p.id] || 0) > 0);
       if (ordered.length === 0) { showToast('⚠️ Sélectionnez au moins 1 produit à commander'); return; }
 
-      document.getElementById('dynamicPrintStyle').innerHTML = `@page { size: A4 portrait; margin: 10mm; }`;
       const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
@@ -845,9 +844,11 @@
         </tr>
       `).join('');
 
-      const printArea = document.getElementById('realPrintArea');
-      printArea.innerHTML = `
-        <div class="print-order-a4">
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"><title>Bon de Commande</title></head>
+        <body style="font-family:sans-serif;padding:20px;color:#000;background:#fff;">
           <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #0f172a;padding-bottom:10px;margin-bottom:16px;">
             <div>
               <div style="font-size:16pt;font-weight:900;color:#0f172a;">BON DE COMMANDE FOURNISSEUR</div>
@@ -871,10 +872,25 @@
             </thead>
             <tbody>${rowsHtml}</tbody>
           </table>
-        </div>
+        </body>
+        </html>
       `;
-      window.print();
-      setTimeout(() => changeRollFormat(rollFormat, false), 1500);
+
+      try {
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Print) {
+          await window.Capacitor.Plugins.Print.print({ content: htmlContent });
+          showToast('📄 Export PDF / Impression lancé');
+        } else {
+          const printArea = document.getElementById('realPrintArea');
+          printArea.innerHTML = `<div class="print-order-a4">${htmlContent}</div>`;
+          window.print();
+          showToast('📄 Export PDF / Impression lancé');
+        }
+      } catch (e) {
+        const printArea = document.getElementById('realPrintArea');
+        printArea.innerHTML = `<div class="print-order-a4">${htmlContent}</div>`;
+        window.print();
+      }
     }
 
     // ==================== SCAN BL (SANS PRÉVISUALISATION VIDÉO) ====================
@@ -1260,7 +1276,7 @@
     }
     function softRefreshUI() { syncFromCloud(true); }
     async function hardForceRefresh() {
-      showToast('⚡ Rechargement...');
+      showToast('⚡ Recharger...');
       if ('caches' in window) { const names = await caches.keys(); await Promise.all(names.map(n => caches.delete(n))); }
       setTimeout(() => window.location.reload(true), 500);
     }
