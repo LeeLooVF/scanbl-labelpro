@@ -108,7 +108,7 @@
         <div>
           <div class="flex items-center gap-1.5">
             <h1 class="font-extrabold text-sm tracking-tight text-white">OptiStock <span class="text-cyan-400 font-semibold">Enterprise</span></h1>
-            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.5</span>
+            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.6</span>
           </div>
           <p class="text-[10px] text-slate-400">Traçabilité Réception & Approvisionnement</p>
         </div>
@@ -145,10 +145,10 @@
               </div>
             </div>
             <div onclick="switchTab('historique')" class="cursor-pointer p-2.5 rounded-lg bg-slate-950/90 border border-slate-800/90 hover:border-emerald-500/40 transition">
-              <div class="text-[10px] text-slate-400 font-medium">Registre DLC</div>
+              <div class="text-[10px] text-slate-400 font-medium">Dates Courtes</div>
               <div class="flex items-baseline justify-between mt-1">
                 <span id="homeStatHistory" class="text-lg font-black text-white mono">0</span>
-                <span class="text-[9px] text-emerald-400 font-semibold">Lots</span>
+                <span class="text-[9px] text-amber-400 font-semibold">À traiter</span>
               </div>
             </div>
             <div onclick="switchTab('commande')" class="cursor-pointer p-2.5 rounded-lg bg-slate-950/90 border border-slate-800/90 hover:border-amber-500/40 transition">
@@ -207,7 +207,7 @@
         <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between text-[11px]">
             <span class="font-bold uppercase tracking-wider text-slate-400">Maintenance & Déploiement</span>
-            <span class="mono text-slate-400">Build v3.5.0-prod</span>
+            <span class="mono text-slate-400">Build v3.6.0-prod</span>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -316,33 +316,51 @@
         <div id="verifyListContainer" class="space-y-2"></div>
       </section>
 
-      <!-- ==================== ONGLET 3 : HISTORIQUE ==================== -->
+      <!-- ==================== ONGLET 3 : HISTORIQUE (DATES COURTES TRIÉES + BL SCANNÉS + COMMANDES) ==================== -->
       <section id="tab-historique" class="hidden space-y-3">
-        <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-3">
-          <div class="flex items-center justify-between gap-2">
-            <div>
-              <p class="text-[10px] uppercase tracking-wider text-cyan-400 font-bold">Registre Cloud Partagé (Seuil court : <span id="historyShortThresholdLabel">7</span>j)</p>
-              <h2 class="text-sm font-extrabold text-white"><span id="historyTotalCount">0</span> lots d'étiquettes générés</h2>
-            </div>
-            <button type="button" onclick="moveAllExpiredToSortie()" class="px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow flex items-center gap-1.5">
-              <span>✅ Traiter les dates passées</span>
+        <!-- Navigation entre les 3 sous-sections d'Historique -->
+        <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
+          <div class="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px] font-bold">
+            <button type="button" id="hsub-short" onclick="switchHistorySubTab('short')" class="py-2 rounded bg-cyan-500 text-slate-950 font-extrabold">
+              ⏳ Courtes (<span id="countShortBadge">0</span>)
+            </button>
+            <button type="button" id="hsub-bl" onclick="switchHistorySubTab('bl')" class="py-2 rounded text-slate-400">
+              📦 BL Scannés (<span id="countBlBadge">0</span>)
+            </button>
+            <button type="button" id="hsub-orders" onclick="switchHistorySubTab('orders')" class="py-2 rounded text-slate-400">
+              📄 Commandes (<span id="countOrdersBadge">0</span>)
             </button>
           </div>
 
           <div class="relative">
-            <input id="historySearchInput" type="text" oninput="renderHistory()" placeholder="Rechercher un produit, n° de lot ou BL..." class="w-full pl-3 pr-8 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500" />
+            <input id="historySearchInput" type="text" oninput="renderHistory()" placeholder="Rechercher dans cet historique..." class="w-full pl-3 pr-8 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500" />
             <button type="button" onclick="document.getElementById('historySearchInput').value=''; renderHistory();" class="absolute right-2.5 top-2 text-slate-500 text-xs">✕</button>
-          </div>
-
-          <div class="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px] font-bold">
-            <button type="button" id="filter-all" onclick="setHistoryFilter('all')" class="py-1.5 rounded bg-cyan-500 text-slate-950">Toutes (0)</button>
-            <button type="button" id="filter-expired" onclick="setHistoryFilter('expired')" class="py-1.5 rounded text-slate-400">Passées (0)</button>
-            <button type="button" id="filter-short" onclick="setHistoryFilter('short')" class="py-1.5 rounded text-slate-400">Courtes (0)</button>
-            <button type="button" id="filter-valid" onclick="setHistoryFilter('valid')" class="py-1.5 rounded text-slate-400">Valides (0)</button>
           </div>
         </div>
 
-        <div id="historyListContainer" class="space-y-2"></div>
+        <!-- SOUS-SECTION 1 : DATES COURTES À TRAITER (Triées par date la plus proche en premier) -->
+        <div id="hist-panel-short" class="space-y-2.5">
+          <div class="px-3 py-2 rounded-xl bg-[#0f172a] border border-slate-800 flex items-center justify-between">
+            <div>
+              <p class="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Dates Courtes à traiter (≤ J-<span id="historyShortThresholdLabel">7</span>)</p>
+              <p class="text-[11px] text-slate-400">Triées automatiquement de la date la plus proche à la plus lointaine</p>
+            </div>
+            <button type="button" onclick="moveAllExpiredToSortie()" class="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] shadow shrink-0">
+              ✅ Traiter échues
+            </button>
+          </div>
+          <div id="historyShortListContainer" class="space-y-2"></div>
+        </div>
+
+        <!-- SOUS-SECTION 2 : HISTORIQUE DES BONS DE LIVRAISON SCANNÉS -->
+        <div id="hist-panel-bl" class="hidden space-y-2">
+          <div id="historyBlListContainer" class="space-y-2"></div>
+        </div>
+
+        <!-- SOUS-SECTION 3 : HISTORIQUE DES COMMANDES PASSÉES -->
+        <div id="hist-panel-orders" class="hidden space-y-2">
+          <div id="historyOrdersListContainer" class="space-y-2"></div>
+        </div>
       </section>
 
       <!-- ==================== ONGLET 4 : SERVICES & PARAMÈTRES ==================== -->
@@ -370,7 +388,7 @@
             <h3 class="text-xs font-extrabold uppercase tracking-wider text-amber-400">Alerte Date Courte (DLC)</h3>
             <span id="shortDateBadge" class="mono text-[11px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">J-7 avant DLC</span>
           </div>
-          <p class="text-[11px] text-slate-400">Nombre de jours avant la DLC pour basculer automatiquement un produit en <strong class="text-amber-300">Date Courte</strong> dans l'Historique :</p>
+          <p class="text-[11px] text-slate-400">Nombre de jours avant la DLC pour afficher un produit dans <strong class="text-amber-300">Dates Courtes à traiter</strong> :</p>
           <div class="flex items-center gap-2">
             <input id="shortDateDaysInput" type="number" min="1" max="90" value="7" class="w-24 px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white mono font-bold text-center" />
             <span class="text-xs text-slate-400">jour(s)</span>
@@ -454,7 +472,7 @@
 
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Version installée</span>
-            <span class="mono font-bold text-white">OptiStock Pro v3.5.0 (SDK 34)</span>
+            <span class="mono font-bold text-white">OptiStock Pro v3.6.0 (SDK 34)</span>
           </div>
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Dernière synchro Cloud</span>
@@ -472,7 +490,7 @@
 
           <div class="pt-2 border-t border-slate-800 space-y-2">
             <label class="text-[11px] text-slate-400 block">Dépôt GitHub (`utilisateur/depot`) pour récupérer l'APK :</label>
-            <input id="githubRepoInput" type="text" placeholder="ex: LeeLooV/scanbl-labelpro" onchange="saveGithubRepo(this.value)" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white mono" />
+            <input id="githubRepoInput" type="text" placeholder="ex: LeeLooVF/scanbl-labelpro" onchange="saveGithubRepo(this.value)" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white mono" />
             <button type="button" onclick="downloadLatestApk()" class="w-full py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow flex items-center justify-center gap-2">
               <span>📥 Télécharger le dernier OptiStock-Pro.apk</span>
             </button>
@@ -610,6 +628,8 @@
       sortieIds: [],
       kitchenProducts: [],
       kitchenCart: {},
+      scannedBLHistory: [],
+      orderHistory: [],
       shortDateDays: parseInt(localStorage.getItem('optistock_short_days')) || 7
     };
 
@@ -622,13 +642,15 @@
         if (Array.isArray(parsed.verifyItems)) appState.verifyItems = parsed.verifyItems;
         if (Array.isArray(parsed.historyItems)) appState.historyItems = parsed.historyItems;
         if (Array.isArray(parsed.sortieIds)) appState.sortieIds = parsed.sortieIds;
+        if (Array.isArray(parsed.scannedBLHistory)) appState.scannedBLHistory = parsed.scannedBLHistory;
+        if (Array.isArray(parsed.orderHistory)) appState.orderHistory = parsed.orderHistory;
         if (parsed.shortDateDays) appState.shortDateDays = parseInt(parsed.shortDateDays) || 7;
       }
     } catch (e) {}
 
     let isSavingToCloud = false;
     let lastLocalMutationTime = 0;
-    let currentHistoryFilter = 'all';
+    let currentHistorySubTab = 'short'; // 'short' | 'bl' | 'orders'
     let currentKitchenCategory = 'ALL';
     let appTheme = localStorage.getItem('optistock_theme') || 'dark';
     let rollFormat = localStorage.getItem('optistock_roll_format') || '50x30';
@@ -668,7 +690,6 @@
       setTimeout(() => box.classList.add('hidden'), 2800);
     }
 
-    // Fonction d'impression universelle (débloque l'impression dans l'APK Android)
     function triggerNativeOrWebPrint(jobName = 'OptiStock_Print') {
       if (window.AndroidBridge && typeof window.AndroidBridge.printPage === 'function') {
         window.AndroidBridge.printPage(jobName);
@@ -677,7 +698,6 @@
       }
     }
 
-    // Nettoyage des caractères spéciaux pour éviter les bugs de police dans jsPDF
     function cleanPdfText(str) {
       if (!str) return '';
       return String(str)
@@ -756,7 +776,7 @@
       changeRollFormat('CUSTOM', true);
     }
 
-    // ==================== SYNCHRONISATION CLOUD (/state) SANS RÉAPPARITION FANTÔME ====================
+    // ==================== SYNCHRONISATION CLOUD (/state) ====================
     async function syncFromCloud(manual = false) {
       if (isSavingToCloud) return;
       if (!manual && (Date.now() - lastLocalMutationTime < 4500)) return;
@@ -771,6 +791,8 @@
         appState.sortieIds = Array.isArray(data.sortieIds) ? data.sortieIds : [];
         appState.kitchenProducts = Array.isArray(data.kitchenProducts) ? data.kitchenProducts : [];
         appState.kitchenCart = (data.kitchenCart && typeof data.kitchenCart === 'object') ? data.kitchenCart : {};
+        if (Array.isArray(data.scannedBLHistory)) appState.scannedBLHistory = data.scannedBLHistory;
+        if (Array.isArray(data.orderHistory)) appState.orderHistory = data.orderHistory;
 
         if (data.shortDateDays) {
           appState.shortDateDays = parseInt(data.shortDateDays) || 7;
@@ -805,6 +827,8 @@
             sortieIds: appState.sortieIds,
             kitchenProducts: appState.kitchenProducts,
             kitchenCart: appState.kitchenCart,
+            scannedBLHistory: appState.scannedBLHistory,
+            orderHistory: appState.orderHistory,
             shortDateDays: appState.shortDateDays
           })
         });
@@ -840,7 +864,10 @@
 
     function renderHomeStats() {
       document.getElementById('homeStatVerify').textContent = appState.verifyItems.length;
-      document.getElementById('homeStatHistory').textContent = appState.historyItems.length;
+      const shortLimit = Math.max(1, parseInt(appState.shortDateDays) || 7);
+      const shortToTreatCount = appState.historyItems.filter(it => !appState.sortieIds.includes(it.id) && getDaysDiff(it.dlc) <= shortLimit).length;
+      document.getElementById('homeStatHistory').textContent = shortToTreatCount;
+
       const cartUnits = Object.values(appState.kitchenCart || {}).reduce((s, q) => s + (parseInt(q) || 0), 0);
       document.getElementById('homeStatKitchen').textContent = cartUnits;
       document.getElementById('homeCatalogCountBadge').textContent = `${appState.kitchenProducts.length} réf.`;
@@ -981,7 +1008,78 @@
       pushToCloud();
     }
 
-    // Génération d'un vrai fichier PDF A4 + Ouverture directe Android ("Ouvrir avec...")
+    // Fonction partagée pour générer et ouvrir un PDF de commande (nouvelle commande ou depuis l'historique)
+    async function generateAndOpenOrderPdfDocument(orderObj) {
+      const { refCmd, dateStr, timeStr, items } = orderObj;
+      const fileName = `Bon-Commande-${dateStr.replace(/\//g, '-')}-${refCmd}.pdf`;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text('BON DE COMMANDE FOURNISSEUR', 14, 18);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text(cleanPdfText(`Édité sur OptiStock Enterprise le ${dateStr} à ${timeStr}`), 14, 24);
+      doc.text(cleanPdfText(`Référence : ${refCmd}  |  Total références : ${items.length}`), 14, 29);
+
+      const bodyRows = items.map((p, idx) => [
+        String(idx + 1),
+        cleanPdfText(p.name || 'Article'),
+        cleanPdfText(p.category || '-'),
+        cleanPdfText(p.unit || 'Colis'),
+        String(p.qty || 1),
+        '[   ]'
+      ]);
+
+      doc.autoTable({
+        startY: 34,
+        head: [['#', cleanPdfText('Désignation du Produit'), cleanPdfText('Catégorie'), 'Conditionnement', cleanPdfText('Qté'), 'Pointage']],
+        body: bodyRows,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 9.5 },
+        bodyStyles: { fontSize: 9.5, textColor: [15, 23, 42], valign: 'middle' },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+          1: { cellWidth: 78, fontStyle: 'bold' },
+          2: { cellWidth: 36 },
+          3: { cellWidth: 28 },
+          4: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+          5: { cellWidth: 18, halign: 'center' }
+        }
+      });
+
+      if (window.AndroidBridge && typeof window.AndroidBridge.openPdfBase64 === 'function') {
+        const dataUri = doc.output('datauristring');
+        window.AndroidBridge.openPdfBase64(dataUri, fileName);
+        return;
+      }
+
+      const pdfBlob = doc.output('blob');
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          files: [pdfFile],
+          title: fileName,
+          text: `Bon de commande ${refCmd}`
+        });
+        return;
+      }
+
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Export du Bon de Commande PDF A4 + Archivage dans Historique Commandes + Remise à zéro de la sélection
     async function exportKitchenOrderPDF() {
       const ordered = appState.kitchenProducts.filter(p => (appState.kitchenCart[p.id] || 0) > 0);
       if (ordered.length === 0) {
@@ -993,113 +1091,53 @@
       const dateStr = now.toLocaleDateString('fr-FR');
       const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
       const refCmd = 'CMD-' + now.getTime().toString().slice(-5);
-      const fileName = `Bon-Commande-${dateStr.replace(/\//g, '-')}-${refCmd}.pdf`;
+
+      const orderItemsSnapshot = ordered.map(p => ({
+        name: p.name,
+        unit: p.unit || 'Colis',
+        category: p.category || '-',
+        qty: parseInt(appState.kitchenCart[p.id]) || 1
+      }));
+
+      const totalUnits = orderItemsSnapshot.reduce((s, it) => s + it.qty, 0);
+
+      const newOrderRecord = {
+        id: 'ORD-' + now.getTime(),
+        refCmd,
+        dateStr,
+        timeStr,
+        createdAt: now.toISOString(),
+        totalRefs: orderItemsSnapshot.length,
+        totalUnits,
+        items: orderItemsSnapshot
+      };
 
       try {
-        showToast('📄 Génération du PDF A4...');
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        showToast('📄 Génération du PDF A4 et archivage...');
 
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.setTextColor(15, 23, 42);
-        doc.text('BON DE COMMANDE FOURNISSEUR', 14, 18);
+        // 1. Archive la commande dans l'historique des commandes passées
+        appState.orderHistory.unshift(newOrderRecord);
 
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(71, 85, 105);
-        doc.text(cleanPdfText(`Édité sur OptiStock Enterprise le ${dateStr} à ${timeStr}`), 14, 24);
-        doc.text(cleanPdfText(`Référence : ${refCmd}  |  Total références : ${ordered.length}`), 14, 29);
+        // 2. Efface immédiatement la liste de sélection (remise à 0)
+        appState.kitchenCart = {};
+        await pushToCloud();
 
-        const bodyRows = ordered.map((p, idx) => [
-          String(idx + 1),
-          cleanPdfText(p.name || 'Article'),
-          cleanPdfText(p.category || '-'),
-          cleanPdfText(p.unit || 'Colis'),
-          String(appState.kitchenCart[p.id] || 1),
-          '[   ]'
-        ]);
-
-        doc.autoTable({
-          startY: 34,
-          head: [['#', cleanPdfText('Désignation du Produit'), cleanPdfText('Catégorie'), 'Conditionnement', cleanPdfText('Qté'), 'Pointage']],
-          body: bodyRows,
-          theme: 'grid',
-          headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 9.5 },
-          bodyStyles: { fontSize: 9.5, textColor: [15, 23, 42], valign: 'middle' },
-          columnStyles: {
-            0: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
-            1: { cellWidth: 78, fontStyle: 'bold' },
-            2: { cellWidth: 36 },
-            3: { cellWidth: 28 },
-            4: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
-            5: { cellWidth: 18, halign: 'center' }
-          }
-        });
-
-        // 1. Pont natif APK Android : Ouvre directement la boîte "Ouvrir le PDF avec..."
-        if (window.AndroidBridge && typeof window.AndroidBridge.openPdfBase64 === 'function') {
-          const dataUri = doc.output('datauristring');
-          window.AndroidBridge.openPdfBase64(dataUri, fileName);
-          showToast('📄 Choisissez l\'application pour ouvrir le PDF');
-          return;
-        }
-
-        // 2. API Web Share native (Chrome Android)
-        const pdfBlob = doc.output('blob');
-        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-          await navigator.share({
-            files: [pdfFile],
-            title: fileName,
-            text: `Bon de commande ${refCmd}`
-          });
-          showToast('✅ Sélecteur Android ouvert');
-          return;
-        }
-
-        // 3. Repli : Spouleur d'impression / Enregistrer en PDF Android
-        const printArea = document.getElementById('realPrintArea');
-        document.getElementById('dynamicPrintStyle').innerHTML = `@page { size: A4 portrait; margin: 10mm; }`;
-        const rowsHtml = ordered.map((p, idx) => `
-          <tr style="border-bottom:1px solid #cbd5e1;">
-            <td style="padding:8px;font-weight:700;">${idx + 1}</td>
-            <td style="padding:8px;font-weight:800;font-size:10.5pt;color:#0f172a;">${p.name}</td>
-            <td style="padding:8px;font-size:9pt;color:#475569;">${p.category || '-'}</td>
-            <td style="padding:8px;font-size:9.5pt;font-weight:700;font-family:monospace;">${p.unit || 'Colis'}</td>
-            <td style="padding:8px;text-align:center;font-size:12pt;font-weight:900;color:#0f172a;">${appState.kitchenCart[p.id]}</td>
-            <td style="padding:8px;text-align:center;">☐</td>
-          </tr>
-        `).join('');
-
-        printArea.innerHTML = `
-          <div class="print-order-a4">
-            <h1 style="font-size:16pt;font-weight:900;margin:0 0 4px 0;">BON DE COMMANDE FOURNISSEUR</h1>
-            <p style="font-size:9.5pt;color:#334155;margin:0 0 14px 0;">Réf: ${refCmd} — Édité le ${dateStr} à ${timeStr}</p>
-            <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
-              <thead>
-                <tr style="background:#f1f5f9;border-bottom:2px solid #0f172a;text-align:left;">
-                  <th style="padding:8px;">#</th>
-                  <th style="padding:8px;">Désignation</th>
-                  <th style="padding:8px;">Catégorie</th>
-                  <th style="padding:8px;">Conditionnement</th>
-                  <th style="padding:8px;text-align:center;">Qté</th>
-                  <th style="padding:8px;text-align:center;">Reçu</th>
-                </tr>
-              </thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
-          </div>
-        `;
-        triggerNativeOrWebPrint(fileName);
-        setTimeout(() => changeRollFormat(rollFormat, false), 1500);
+        // 3. Génère et ouvre le PDF
+        await generateAndOpenOrderPdfDocument(newOrderRecord);
+        showToast('✅ PDF généré • Sélection remise à 0');
       } catch (err) {
         if (err && err.name === 'AbortError') return;
         showToast('⚠️ ' + (err.message || 'Erreur PDF'));
       }
     }
 
-    // ==================== SCAN BL ====================
+    async function reprintPastOrderPDF(orderId) {
+      const ord = appState.orderHistory.find(o => o.id === orderId);
+      if (!ord) return;
+      await generateAndOpenOrderPdfDocument(ord);
+    }
+
+    // ==================== SCAN BL (AVEC ARCHIVAGE DANS HISTORIQUE DES BL SCANNÉS) ====================
     function openGalleryPicker() {
       const input = document.getElementById('fileInputGallery');
       input.value = ''; input.click();
@@ -1157,20 +1195,31 @@
         }
 
         let addedToCatalog = 0;
+        const blSummaryItems = [];
+
         items.forEach((it, idx) => {
           const cleanName = (it.name || 'Article sans nom').trim();
           const cleanUnit = (it.unit || 'Colis').trim();
           const cleanCat = it.category || 'Épicerie & Sec';
+          const cleanDlc = it.dlc || today;
+          const cleanLot = it.lot || ('LOT-' + Math.floor(100 + Math.random() * 899));
 
           appState.verifyItems.push({
             id: 'V-' + Date.now() + '-' + idx,
             name: cleanName,
-            dlc: it.dlc || today,
+            dlc: cleanDlc,
             receivedDate: receivedDate,
-            lot: it.lot || ('LOT-' + Math.floor(100 + Math.random() * 899)),
+            lot: cleanLot,
             barcode: it.barcode || '3250390000000',
             blNumber: blNumber,
             qty: 1
+          });
+
+          blSummaryItems.push({
+            name: cleanName,
+            unit: cleanUnit,
+            dlc: cleanDlc,
+            lot: cleanLot
           });
 
           const existingProd = appState.kitchenProducts.find(
@@ -1187,9 +1236,19 @@
           }
         });
 
+        // Enregistre le BL dans l'historique des Bons de Livraison scannés
+        appState.scannedBLHistory.unshift({
+          id: 'BLH-' + Date.now(),
+          blNumber: blNumber,
+          receivedDate: receivedDate,
+          scannedAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          itemCount: blSummaryItems.length,
+          items: blSummaryItems
+        });
+
         await pushToCloud();
         overlay.classList.add('hidden');
-        showToast(`✅ ${items.length} réf. extraites (+${addedToCatalog} au catalogue)`);
+        showToast(`✅ ${items.length} réf. extraites • BL archivé`);
         switchTab('verifier');
       } catch (err) {
         overlay.classList.add('hidden');
@@ -1310,86 +1369,161 @@
       `;
     }
 
-    // ==================== HISTORIQUE (AVEC DATE DE RÉCEPTION & SEUIL PERSONNALISÉ) ====================
-    function setHistoryFilter(filter) {
-      currentHistoryFilter = filter;
-      ['all', 'expired', 'short', 'valid'].forEach(f => {
-        document.getElementById('filter-' + f).className = (f === filter) ? 'py-1.5 rounded bg-cyan-500 text-slate-950 font-bold' : 'py-1.5 rounded text-slate-400';
+    // ==================== HISTORIQUE : 1. DATES COURTES À TRAITER (TRIÉES) | 2. BL SCANNÉS | 3. COMMANDES ====================
+    function switchHistorySubTab(sub) {
+      currentHistorySubTab = sub;
+      ['short', 'bl', 'orders'].forEach(s => {
+        document.getElementById('hist-panel-' + s).classList.toggle('hidden', s !== sub);
+        const btn = document.getElementById('hsub-' + s);
+        btn.className = (s === sub)
+          ? 'py-2 rounded bg-cyan-500 text-slate-950 font-extrabold'
+          : 'py-2 rounded text-slate-400';
       });
       renderHistory();
     }
 
     function renderHistory() {
-      const container = document.getElementById('historyListContainer');
       const query = (document.getElementById('historySearchInput')?.value || '').toLowerCase().trim();
       const shortLimit = Math.max(1, parseInt(appState.shortDateDays) || 7);
-      let counts = { all: appState.historyItems.length, expired: 0, short: 0, valid: 0 };
 
-      appState.historyItems.forEach(item => {
-        const diff = getDaysDiff(item.dlc);
-        if (diff < 0) counts.expired++;
-        else if (diff <= shortLimit) counts.short++;
-        else counts.valid++;
-      });
+      // 1. Filtrer uniquement les Dates Courtes (et échues) NON encore traitées, triées par DLC la plus proche en premier
+      const shortItems = appState.historyItems
+        .filter(item => {
+          if (appState.sortieIds.includes(item.id)) return false; // Déjà traité
+          const diff = getDaysDiff(item.dlc);
+          if (diff > shortLimit) return false; // Masque les produits valides lointains
+          if (query && !`${item.name} ${item.lot} ${item.blNumber}`.toLowerCase().includes(query)) return false;
+          return true;
+        })
+        .sort((a, b) => new Date(a.dlc) - new Date(b.dlc));
 
-      document.getElementById('historyTotalCount').textContent = counts.all;
-      document.getElementById('filter-all').textContent = `Toutes (${counts.all})`;
-      document.getElementById('filter-expired').textContent = `Passées (${counts.expired})`;
-      document.getElementById('filter-short').textContent = `Courtes (${counts.short})`;
-      document.getElementById('filter-valid').textContent = `Valides (${counts.valid})`;
+      document.getElementById('countShortBadge').textContent = shortItems.length;
+      document.getElementById('countBlBadge').textContent = appState.scannedBLHistory.length;
+      document.getElementById('countOrdersBadge').textContent = appState.orderHistory.length;
 
-      const filtered = appState.historyItems.filter(item => {
-        const diff = getDaysDiff(item.dlc);
-        if (currentHistoryFilter === 'expired' && diff >= 0) return false;
-        if (currentHistoryFilter === 'short' && (diff < 0 || diff > shortLimit)) return false;
-        if (currentHistoryFilter === 'valid' && diff <= shortLimit) return false;
-        if (query && !`${item.name} ${item.lot} ${item.blNumber}`.toLowerCase().includes(query)) return false;
-        return true;
-      });
+      // Rendu Sous-onglet 1 : Dates courtes à traiter
+      const shortContainer = document.getElementById('historyShortListContainer');
+      if (shortItems.length === 0) {
+        shortContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucune date courte à traiter actuellement.</div>`;
+      } else {
+        shortContainer.innerHTML = shortItems.map(item => {
+          const diff = getDaysDiff(item.dlc);
+          const badge = diff < 0
+            ? `<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px] font-bold">ÉCHU (${diff}j)</span>`
+            : `<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">DATE COURTE (J-${diff})</span>`;
+          const recDate = formatDateFR(item.receivedDate || (item.printedAt ? item.printedAt.split('T')[0] : ''));
 
-      if (filtered.length === 0) {
-        container.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucune étiquette trouvée.</div>`;
-        return;
+          return `
+            <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    ${badge}
+                    <span class="text-[10px] mono text-slate-400">${item.blNumber || ''}</span>
+                  </div>
+                  <h4 class="text-xs font-bold text-white line-clamp-2 break-words mt-1 leading-snug">${item.name}</h4>
+                </div>
+                <div class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shrink-0">
+                  <div class="text-[9px] text-slate-400 uppercase">DLC / DLUO</div>
+                  <div class="text-xs font-extrabold ${diff < 0 ? 'text-rose-400' : 'text-amber-300'} mono">${formatDateFR(item.dlc)}</div>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] bg-slate-950/90 px-3 py-1.5 rounded-lg border border-slate-800">
+                <div class="flex items-center gap-3 flex-wrap">
+                  <span class="text-slate-400">📥 Reçu le : <strong class="mono text-white">${recDate}</strong></span>
+                  <span class="text-slate-400">Lot : <strong class="mono text-cyan-300">${item.lot}</strong></span>
+                </div>
+                <button type="button" onclick="toggleItemSortie('${item.id}')" class="px-2.5 py-1 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold shrink-0 ml-2">✅ Traiter</button>
+              </div>
+            </div>
+          `;
+        }).join('');
       }
 
-      container.innerHTML = filtered.map(item => {
-        const diff = getDaysDiff(item.dlc);
-        const inSortie = appState.sortieIds.includes(item.id);
-        let badge = diff < 0
-          ? `<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px] font-bold">PÉRIMÉ (${diff}j)</span>`
-          : (diff <= shortLimit
-            ? `<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">DATE COURTE (J-${diff})</span>`
-            : `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">VALIDE (+${diff}j)</span>`);
+      // Rendu Sous-onglet 2 : Historique des BL Scannés
+      const blContainer = document.getElementById('historyBlListContainer');
+      const filteredBl = appState.scannedBLHistory.filter(bl => {
+        if (!query) return true;
+        const names = (bl.items || []).map(i => i.name).join(' ');
+        return `${bl.blNumber} ${bl.receivedDate} ${names}`.toLowerCase().includes(query);
+      });
 
-        const recDate = formatDateFR(item.receivedDate || (item.printedAt ? item.printedAt.split('T')[0] : ''));
-
-        return `
-          <div class="p-3 rounded-xl bg-[#0f172a] border ${inSortie ? 'border-emerald-500/60' : 'border-slate-800'} space-y-2">
-            <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  ${badge}
-                  <span class="text-[10px] mono text-slate-400">${item.blNumber || ''}</span>
-                  ${inSortie ? '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 text-[9px] font-bold">TRAITÉ</span>' : ''}
-                </div>
-                <h4 class="text-xs font-bold text-white line-clamp-2 break-words mt-1 leading-snug">${item.name}</h4>
+      if (filteredBl.length === 0) {
+        blContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucun Bon de Livraison scanné dans l'historique.</div>`;
+      } else {
+        blContainer.innerHTML = filteredBl.map(bl => `
+          <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div>
+                <span class="text-xs font-extrabold text-cyan-400 mono">${bl.blNumber || 'BL'}</span>
+                <div class="text-[10px] text-slate-400">📥 Reçu le ${formatDateFR(bl.receivedDate)} ${bl.scannedAt ? 'à ' + bl.scannedAt : ''}</div>
               </div>
-              <div class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 shrink-0">
-                <div class="text-[9px] text-slate-400 uppercase">DLC / DLUO</div>
-                <div class="text-xs font-extrabold ${diff < 0 ? 'text-rose-400' : 'text-cyan-300'} mono">${formatDateFR(item.dlc)}</div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] mono font-bold text-white">${bl.itemCount || (bl.items ? bl.items.length : 0)} réf.</span>
+                <button type="button" onclick="deleteScannedBlRecord('${bl.id}')" class="text-rose-400 text-xs px-1.5">🗑️</button>
               </div>
             </div>
-
-            <div class="flex items-center justify-between text-[11px] bg-slate-950/90 px-3 py-1.5 rounded-lg border border-slate-800">
-              <div class="flex items-center gap-3 flex-wrap">
-                <span class="text-slate-400">📥 Reçu le : <strong class="mono text-white">${recDate}</strong></span>
-                <span class="text-slate-400">Lot : <strong class="mono text-cyan-300">${item.lot}</strong></span>
-              </div>
-              <button type="button" onclick="toggleItemSortie('${item.id}')" class="text-emerald-400 font-bold hover:underline shrink-0 ml-2">${inSortie ? '↩️ Annuler' : '✅ Traiter DLC'}</button>
+            <div class="space-y-1">
+              ${(bl.items || []).map(it => `
+                <div class="flex items-center justify-between text-[11px] bg-slate-950/70 px-2.5 py-1 rounded border border-slate-800/60 gap-2">
+                  <span class="font-semibold text-white truncate">${it.name}</span>
+                  <span class="mono text-[10px] text-amber-300 shrink-0">${it.unit || 'Colis'} • DLC ${formatDateFR(it.dlc)}</span>
+                </div>
+              `).join('')}
             </div>
           </div>
-        `;
-      }).join('');
+        `).join('');
+      }
+
+      // Rendu Sous-onglet 3 : Historique des Commandes Passées
+      const ordContainer = document.getElementById('historyOrdersListContainer');
+      const filteredOrders = appState.orderHistory.filter(ord => {
+        if (!query) return true;
+        const names = (ord.items || []).map(i => i.name).join(' ');
+        return `${ord.refCmd} ${ord.dateStr} ${names}`.toLowerCase().includes(query);
+      });
+
+      if (filteredOrders.length === 0) {
+        ordContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucune commande passée dans l'historique.</div>`;
+      } else {
+        ordContainer.innerHTML = filteredOrders.map(ord => `
+          <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div>
+                <span class="text-xs font-extrabold text-amber-400 mono">${ord.refCmd}</span>
+                <div class="text-[10px] text-slate-400">📅 Passée le ${ord.dateStr} à ${ord.timeStr || ''}</div>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="reprintPastOrderPDF('${ord.id}')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
+                  📄 Ouvrir PDF
+                </button>
+                <button type="button" onclick="deleteOrderRecord('${ord.id}')" class="text-rose-400 text-xs px-1.5">🗑️</button>
+              </div>
+            </div>
+            <div class="space-y-1">
+              ${(ord.items || []).map(it => `
+                <div class="flex items-center justify-between text-[11px] bg-slate-950/70 px-2.5 py-1 rounded border border-slate-800/60 gap-2">
+                  <span class="font-semibold text-white truncate">${it.name}</span>
+                  <span class="mono text-[10px] text-cyan-300 shrink-0">${it.unit || 'Colis'} × <b>${it.qty}</b></span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function deleteScannedBlRecord(id) {
+      appState.scannedBLHistory = appState.scannedBLHistory.filter(x => x.id !== id);
+      await pushToCloud();
+      showToast('🗑️ BL supprimé de l\'historique');
+    }
+
+    async function deleteOrderRecord(id) {
+      appState.orderHistory = appState.orderHistory.filter(x => x.id !== id);
+      await pushToCloud();
+      showToast('🗑️ Commande supprimée de l\'historique');
     }
 
     function toggleItemSortie(id) {
@@ -1405,7 +1539,7 @@
       });
       pushToCloud();
       toggleSortieDrawer(true);
-      showToast(`✅ ${added} DLC passée(s) basculée(s) dans Traiter`);
+      showToast(`✅ ${added} DLC échue(s) basculée(s) dans Traiter`);
     }
 
     function toggleSortieDrawer(open) {
@@ -1428,7 +1562,7 @@
             <div class="text-[10px] mono text-rose-400 mt-0.5">DLC: ${formatDateFR(item.dlc)} • Reçu: ${formatDateFR(item.receivedDate)}</div>
           </div>
           <div class="flex gap-1 shrink-0">
-            <button type="button" onclick="toggleItemSortie('${item.id}')" title="Remettre dans l'historique" class="px-2 py-1 rounded bg-slate-800 text-[10px]">↩️</button>
+            <button type="button" onclick="toggleItemSortie('${item.id}')" title="Remettre dans les dates courtes" class="px-2 py-1 rounded bg-slate-800 text-[10px]">↩️</button>
             <button type="button" onclick="purgeSingleHistoryItem('${item.id}')" title="Supprimer définitivement" class="px-2 py-1 rounded bg-rose-600/30 text-rose-300 text-[10px]">🗑️</button>
           </div>
         </div>
