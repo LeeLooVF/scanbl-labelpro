@@ -108,7 +108,7 @@
         <div>
           <div class="flex items-center gap-1.5">
             <h1 class="font-extrabold text-sm tracking-tight text-white">OptiStock <span class="text-cyan-400 font-semibold">Enterprise</span></h1>
-            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.6</span>
+            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.7</span>
           </div>
           <p class="text-[10px] text-slate-400">Traçabilité Réception & Approvisionnement</p>
         </div>
@@ -207,7 +207,7 @@
         <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between text-[11px]">
             <span class="font-bold uppercase tracking-wider text-slate-400">Maintenance & Déploiement</span>
-            <span class="mono text-slate-400">Build v3.6.0-prod</span>
+            <span class="mono text-slate-400">Build v3.7.0-prod</span>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -318,7 +318,6 @@
 
       <!-- ==================== ONGLET 3 : HISTORIQUE (DATES COURTES TRIÉES + BL SCANNÉS + COMMANDES) ==================== -->
       <section id="tab-historique" class="hidden space-y-3">
-        <!-- Navigation entre les 3 sous-sections d'Historique -->
         <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px] font-bold">
             <button type="button" id="hsub-short" onclick="switchHistorySubTab('short')" class="py-2 rounded bg-cyan-500 text-slate-950 font-extrabold">
@@ -338,7 +337,7 @@
           </div>
         </div>
 
-        <!-- SOUS-SECTION 1 : DATES COURTES À TRAITER (Triées par date la plus proche en premier) -->
+        <!-- SOUS-SECTION 1 : DATES COURTES À TRAITER -->
         <div id="hist-panel-short" class="space-y-2.5">
           <div class="px-3 py-2 rounded-xl bg-[#0f172a] border border-slate-800 flex items-center justify-between">
             <div>
@@ -472,7 +471,7 @@
 
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Version installée</span>
-            <span class="mono font-bold text-white">OptiStock Pro v3.6.0 (SDK 34)</span>
+            <span class="mono font-bold text-white">OptiStock Pro v3.7.0 (SDK 34)</span>
           </div>
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Dernière synchro Cloud</span>
@@ -520,6 +519,28 @@
         <span class="text-base">🕒</span><span>Historique</span>
       </button>
     </nav>
+  </div>
+
+  <!-- ==================== MODAL D'AVERTISSEMENT AVANT SUPPRESSION ==================== -->
+  <div id="confirmDeleteModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-rose-500/50 rounded-2xl max-w-sm w-full p-4 space-y-3 shadow-2xl">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-lg shrink-0">⚠️</div>
+        <div>
+          <h3 id="confirmDeleteTitle" class="text-sm font-extrabold text-white">Confirmer la suppression</h3>
+          <p class="text-[10px] text-rose-300 font-semibold uppercase tracking-wider">Action irréversible</p>
+        </div>
+      </div>
+      <p id="confirmDeleteMessage" class="text-xs text-slate-300 leading-relaxed"></p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeConfirmDeleteModal()" class="px-3.5 py-2 rounded-lg bg-slate-800 text-xs font-semibold text-slate-300">
+          Annuler
+        </button>
+        <button type="button" onclick="executeConfirmedDelete()" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-lg">
+          🗑️ Supprimer
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Modal Ajout / Modification d'un Produit dans Commande -->
@@ -650,8 +671,9 @@
 
     let isSavingToCloud = false;
     let lastLocalMutationTime = 0;
-    let currentHistorySubTab = 'short'; // 'short' | 'bl' | 'orders'
+    let currentHistorySubTab = 'short';
     let currentKitchenCategory = 'ALL';
+    let pendingDeleteCallback = null;
     let appTheme = localStorage.getItem('optistock_theme') || 'dark';
     let rollFormat = localStorage.getItem('optistock_roll_format') || '50x30';
     let customWidth = parseInt(localStorage.getItem('optistock_custom_w')) || 55;
@@ -688,6 +710,27 @@
       box.textContent = msg;
       box.classList.remove('hidden');
       setTimeout(() => box.classList.add('hidden'), 2800);
+    }
+
+    // ==================== GESTIONNAIRE DE CONFIRMATION DE SUPPRESSION ====================
+    function askDeleteConfirmation(title, message, onConfirm) {
+      document.getElementById('confirmDeleteTitle').textContent = title;
+      document.getElementById('confirmDeleteMessage').textContent = message;
+      pendingDeleteCallback = onConfirm;
+      document.getElementById('confirmDeleteModal').classList.remove('hidden');
+    }
+
+    function closeConfirmDeleteModal() {
+      pendingDeleteCallback = null;
+      document.getElementById('confirmDeleteModal').classList.add('hidden');
+    }
+
+    async function executeConfirmedDelete() {
+      const fn = pendingDeleteCallback;
+      closeConfirmDeleteModal();
+      if (typeof fn === 'function') {
+        await fn();
+      }
     }
 
     function triggerNativeOrWebPrint(jobName = 'OptiStock_Print') {
@@ -959,11 +1002,19 @@
       showToast('🧹 Quantités de commande remises à 0');
     }
 
-    async function deleteKitchenProduct(id) {
-      appState.kitchenProducts = appState.kitchenProducts.filter(p => p.id !== id);
-      delete appState.kitchenCart[id];
-      await pushToCloud();
-      showToast('🗑️ Produit supprimé définitivement');
+    function deleteKitchenProduct(id) {
+      const prod = appState.kitchenProducts.find(p => p.id === id);
+      const prodName = prod ? prod.name : 'ce produit';
+      askDeleteConfirmation(
+        'Supprimer du référentiel ?',
+        `Voulez-vous vraiment supprimer « ${prodName} » de votre bibliothèque de produits de commande ?`,
+        async () => {
+          appState.kitchenProducts = appState.kitchenProducts.filter(p => p.id !== id);
+          delete appState.kitchenCart[id];
+          await pushToCloud();
+          showToast('🗑️ Produit supprimé du référentiel');
+        }
+      );
     }
 
     function openKitchenModal(editId = null) {
@@ -1008,7 +1059,6 @@
       pushToCloud();
     }
 
-    // Fonction partagée pour générer et ouvrir un PDF de commande (nouvelle commande ou depuis l'historique)
     async function generateAndOpenOrderPdfDocument(orderObj) {
       const { refCmd, dateStr, timeStr, items } = orderObj;
       const fileName = `Bon-Commande-${dateStr.replace(/\//g, '-')}-${refCmd}.pdf`;
@@ -1079,7 +1129,6 @@
       document.body.removeChild(link);
     }
 
-    // Export du Bon de Commande PDF A4 + Archivage dans Historique Commandes + Remise à zéro de la sélection
     async function exportKitchenOrderPDF() {
       const ordered = appState.kitchenProducts.filter(p => (appState.kitchenCart[p.id] || 0) > 0);
       if (ordered.length === 0) {
@@ -1114,15 +1163,9 @@
 
       try {
         showToast('📄 Génération du PDF A4 et archivage...');
-
-        // 1. Archive la commande dans l'historique des commandes passées
         appState.orderHistory.unshift(newOrderRecord);
-
-        // 2. Efface immédiatement la liste de sélection (remise à 0)
         appState.kitchenCart = {};
         await pushToCloud();
-
-        // 3. Génère et ouvre le PDF
         await generateAndOpenOrderPdfDocument(newOrderRecord);
         showToast('✅ PDF généré • Sélection remise à 0');
       } catch (err) {
@@ -1137,7 +1180,7 @@
       await generateAndOpenOrderPdfDocument(ord);
     }
 
-    // ==================== SCAN BL (AVEC ARCHIVAGE DANS HISTORIQUE DES BL SCANNÉS) ====================
+    // ==================== SCAN BL ====================
     function openGalleryPicker() {
       const input = document.getElementById('fileInputGallery');
       input.value = ''; input.click();
@@ -1236,7 +1279,6 @@
           }
         });
 
-        // Enregistre le BL dans l'historique des Bons de Livraison scannés
         appState.scannedBLHistory.unshift({
           id: 'BLH-' + Date.now(),
           blNumber: blNumber,
@@ -1369,7 +1411,7 @@
       `;
     }
 
-    // ==================== HISTORIQUE : 1. DATES COURTES À TRAITER (TRIÉES) | 2. BL SCANNÉS | 3. COMMANDES ====================
+    // ==================== HISTORIQUE : 1. DATES COURTES À TRAITER | 2. BL SCANNÉS | 3. COMMANDES ====================
     function switchHistorySubTab(sub) {
       currentHistorySubTab = sub;
       ['short', 'bl', 'orders'].forEach(s => {
@@ -1386,12 +1428,11 @@
       const query = (document.getElementById('historySearchInput')?.value || '').toLowerCase().trim();
       const shortLimit = Math.max(1, parseInt(appState.shortDateDays) || 7);
 
-      // 1. Filtrer uniquement les Dates Courtes (et échues) NON encore traitées, triées par DLC la plus proche en premier
       const shortItems = appState.historyItems
         .filter(item => {
-          if (appState.sortieIds.includes(item.id)) return false; // Déjà traité
+          if (appState.sortieIds.includes(item.id)) return false;
           const diff = getDaysDiff(item.dlc);
-          if (diff > shortLimit) return false; // Masque les produits valides lointains
+          if (diff > shortLimit) return false;
           if (query && !`${item.name} ${item.lot} ${item.blNumber}`.toLowerCase().includes(query)) return false;
           return true;
         })
@@ -1401,7 +1442,6 @@
       document.getElementById('countBlBadge').textContent = appState.scannedBLHistory.length;
       document.getElementById('countOrdersBadge').textContent = appState.orderHistory.length;
 
-      // Rendu Sous-onglet 1 : Dates courtes à traiter
       const shortContainer = document.getElementById('historyShortListContainer');
       if (shortItems.length === 0) {
         shortContainer.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucune date courte à traiter actuellement.</div>`;
@@ -1441,7 +1481,6 @@
         }).join('');
       }
 
-      // Rendu Sous-onglet 2 : Historique des BL Scannés
       const blContainer = document.getElementById('historyBlListContainer');
       const filteredBl = appState.scannedBLHistory.filter(bl => {
         if (!query) return true;
@@ -1461,7 +1500,7 @@
               </div>
               <div class="flex items-center gap-2">
                 <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] mono font-bold text-white">${bl.itemCount || (bl.items ? bl.items.length : 0)} réf.</span>
-                <button type="button" onclick="deleteScannedBlRecord('${bl.id}')" class="text-rose-400 text-xs px-1.5">🗑️</button>
+                <button type="button" onclick="deleteScannedBlRecord('${bl.id}')" title="Supprimer ce BL" class="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center">🗑️</button>
               </div>
             </div>
             <div class="space-y-1">
@@ -1476,7 +1515,6 @@
         `).join('');
       }
 
-      // Rendu Sous-onglet 3 : Historique des Commandes Passées
       const ordContainer = document.getElementById('historyOrdersListContainer');
       const filteredOrders = appState.orderHistory.filter(ord => {
         if (!query) return true;
@@ -1498,7 +1536,7 @@
                 <button type="button" onclick="reprintPastOrderPDF('${ord.id}')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
                   📄 Ouvrir PDF
                 </button>
-                <button type="button" onclick="deleteOrderRecord('${ord.id}')" class="text-rose-400 text-xs px-1.5">🗑️</button>
+                <button type="button" onclick="deleteOrderRecord('${ord.id}')" title="Supprimer cette commande" class="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center">🗑️</button>
               </div>
             </div>
             <div class="space-y-1">
@@ -1514,16 +1552,32 @@
       }
     }
 
-    async function deleteScannedBlRecord(id) {
-      appState.scannedBLHistory = appState.scannedBLHistory.filter(x => x.id !== id);
-      await pushToCloud();
-      showToast('🗑️ BL supprimé de l\'historique');
+    function deleteScannedBlRecord(id) {
+      const bl = appState.scannedBLHistory.find(x => x.id === id);
+      const blName = bl ? bl.blNumber : 'ce Bon de Livraison';
+      askDeleteConfirmation(
+        'Supprimer ce BL scanné ?',
+        `Voulez-vous vraiment supprimer l'archive du bon de livraison « ${blName} » de l'historique ?`,
+        async () => {
+          appState.scannedBLHistory = appState.scannedBLHistory.filter(x => x.id !== id);
+          await pushToCloud();
+          showToast('🗑️ BL supprimé de l\'historique');
+        }
+      );
     }
 
-    async function deleteOrderRecord(id) {
-      appState.orderHistory = appState.orderHistory.filter(x => x.id !== id);
-      await pushToCloud();
-      showToast('🗑️ Commande supprimée de l\'historique');
+    function deleteOrderRecord(id) {
+      const ord = appState.orderHistory.find(x => x.id === id);
+      const ordName = ord ? ord.refCmd : 'cette commande';
+      askDeleteConfirmation(
+        'Supprimer cette commande ?',
+        `Voulez-vous vraiment supprimer l'archive de la commande « ${ordName} » de l'historique ?`,
+        async () => {
+          appState.orderHistory = appState.orderHistory.filter(x => x.id !== id);
+          await pushToCloud();
+          showToast('🗑️ Commande supprimée de l\'historique');
+        }
+      );
     }
 
     function toggleItemSortie(id) {
