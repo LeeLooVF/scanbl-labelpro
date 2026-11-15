@@ -5,6 +5,7 @@ const DEFAULT_STATE = {
   sortieIds: [],
   kitchenProducts: [],
   kitchenCart: {},
+  shortDateDays: 7,
   updatedAt: new Date().toISOString()
 };
 
@@ -26,6 +27,7 @@ export async function onRequestGet(context) {
       sortieIds: Array.isArray(parsed.sortieIds) ? parsed.sortieIds : [],
       kitchenProducts: Array.isArray(parsed.kitchenProducts) ? parsed.kitchenProducts : [],
       kitchenCart: (parsed.kitchenCart && typeof parsed.kitchenCart === "object") ? parsed.kitchenCart : {},
+      shortDateDays: Number(parsed.shortDateDays) > 0 ? Number(parsed.shortDateDays) : 7,
       updatedAt: parsed.updatedAt || new Date().toISOString()
     };
 
@@ -64,6 +66,7 @@ export async function onRequestPost(context) {
       sortieIds: Array.isArray(body.sortieIds) ? body.sortieIds : (oldState.sortieIds || []),
       kitchenProducts: Array.isArray(body.kitchenProducts) ? body.kitchenProducts : (oldState.kitchenProducts || []),
       kitchenCart: (body.kitchenCart && typeof body.kitchenCart === "object") ? body.kitchenCart : (oldState.kitchenCart || {}),
+      shortDateDays: Number(body.shortDateDays) > 0 ? Number(body.shortDateDays) : (Number(oldState.shortDateDays) || 7),
       updatedAt: new Date().toISOString(),
       updatedBy: body.terminalId || "TERMINAL"
     };
