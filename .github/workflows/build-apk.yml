@@ -1,105 +1,110 @@
-// functions/scan.js
-export async function onRequestPost(context) {
-  const { request, env } = context;
+name: Build OptiStock Pro APK
 
-  try {
-    if (!env.GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "Clé GEMINI_API_KEY non configurée sur Cloudflare" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
-    const { imageBase64, mimeType } = await request.json();
-    if (!imageBase64) {
-      return new Response(JSON.stringify({ error: "Aucune image reçue" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
+permissions:
+  contents: write
 
-    const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-    const today = new Date().toISOString().split("T")[0];
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
 
-    const prompt = `Tu es un assistant logistique professionnel. Analyse cette photo de bon de livraison (BL).
-Extrais chaque ligne de produit livré et renvoie UNIQUEMENT un objet JSON strict respectant ce format :
-{
-  "blNumber": "Numéro du BL détecté (ex: BL-84920)",
-  "receivedDate": "Date de réception au format YYYY-MM-DD (par défaut ${today})",
-  "items": [
-    {
-      "name": "Désignation claire et concise du produit",
-      "unit": "Conditionnement détecté (ex: Colis 5kg, Carton x12, Bac 2.5kg, Unité, Fardeau x6)",
-      "category": "Catégorie (Viandes & Poissons, Fruits & Légumes, Crèmerie & Frais, Épicerie & Sec, Boissons, ou Hygiène & Emballage)",
-      "dlc": "Date DLC ou DLUO au format YYYY-MM-DD (si absente sur le BL, mets ${today})",
-      "lot": "Numéro de lot (ex: LOT-XXXX)",
-      "barcode": "Code EAN ou code article (chiffres uniquement)",
-      "qty": 1
-    }
-  ]
-}`;
+    steps:
+      - name: 1. Récupération du code source
+        uses: actions/checkout@v4
 
-    // Ordre de priorité des modèles avec gemini-3.0-flash en premier
-    const modelsToTry = [
-      "gemini-3.0-flash",
-      "gemini-3.0-flash-preview",
-      "gemini-2.5-flash-preview-09-2025",
-      "gemini-2.0-flash"
-    ];
+      - name: 2. Installation de Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    let lastError = "Erreur API Gemini";
-    let resultData = null;
+      - name: 3. Installation de Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    for (const modelName of modelsToTry) {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${env.GEMINI_API_KEY}`;
+      - name: 4. Préparation du dossier web et installation Capacitor
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+          npm install
 
-      const response = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: mimeType || "image/jpeg",
-                  data: cleanBase64
-                }
+      - name: 5. Génération et synchronisation du projet Android
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: 6. Permissions Android 14/15 sans avertissement + Relais Caméra/Fichiers
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "android.permission.CAMERA" "$MANIFEST"; then
+            sed -i '/<application/i \    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />\n    <uses-permission android:name="android.permission.BLUETOOTH" />\n    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n    <uses-feature android:name="android.hardware.camera" android:required="false" />' "$MANIFEST"
+          fi
+
+          # Garantit targetSdkVersion 34 pour supprimer l'avertissement Android d'ancienne version
+          if [ -f "android/variables.gradle" ]; then
+            sed -i 's/targetSdkVersion = [0-9]*/targetSdkVersion = 34/g' android/variables.gradle
+          fi
+
+          # Demande groupée des autorisations dès l'ouverture sans écraser le FileChooser Capacitor
+          MAIN_ACT=$(find android/app/src/main/java -name "MainActivity.java" | head -n 1)
+          if [ -n "$MAIN_ACT" ]; then
+            PKG_LINE=$(head -n 1 "$MAIN_ACT")
+            cat << EOF > "$MAIN_ACT"
+          $PKG_LINE
+
+          import android.Manifest;
+          import android.os.Build;
+          import android.os.Bundle;
+          import androidx.core.app.ActivityCompat;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                      ActivityCompat.requestPermissions(this, new String[]{
+                          Manifest.permission.CAMERA,
+                          Manifest.permission.READ_MEDIA_IMAGES,
+                          Manifest.permission.BLUETOOTH_CONNECT,
+                          Manifest.permission.BLUETOOTH_SCAN
+                      }, 101);
+                  } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                      ActivityCompat.requestPermissions(this, new String[]{
+                          Manifest.permission.CAMERA,
+                          Manifest.permission.READ_EXTERNAL_STORAGE,
+                          Manifest.permission.WRITE_EXTERNAL_STORAGE
+                      }, 101);
+                  }
               }
-            ]
-          }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.1
           }
-        })
-      });
+          EOF
+          fi
 
-      const result = await response.json();
+      - name: 7. Compilation de l'APK OptiStock Pro
+        working-directory: ./android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../OptiStock-Pro.apk
 
-      if (response.ok && result.candidates?.[0]?.content?.parts?.[0]?.text) {
-        const rawText = result.candidates[0].content.parts[0].text;
-        resultData = JSON.parse(rawText);
-        resultData.modelUsed = modelName;
-        break;
-      } else {
-        lastError = result.error?.message || `Modèle ${modelName} indisponible`;
-      }
-    }
+      - name: 8. Publication dans Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OptiStock-Pro-APK
+          path: OptiStock-Pro.apk
 
-    if (!resultData) {
-      throw new Error(lastError);
-    }
-
-    return new Response(JSON.stringify(resultData), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-}
+      - name: 9. Publication automatique sur GitHub Releases (Lien direct de téléchargement)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "OptiStock Pro — Dernière Version APK"
+          files: OptiStock-Pro.apk
+          prerelease: false
