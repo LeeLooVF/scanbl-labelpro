@@ -143,11 +143,12 @@ jobs:
 
       - name: 7. Configuration du SDK Android et acceptation des licences
         uses: android-actions/setup-android@v3
+        with:
+          accept-license: true
 
       - name: 8. Compilation de l'APK OptiStock Pro
         working-directory: ./android
         run: |
-          yes | sdkmanager --licenses || true
           chmod +x gradlew
           ./gradlew assembleDebug
           cp app/build/outputs/apk/debug/app-debug.apk ../OptiStock-Pro.apk
