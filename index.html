@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0b1120" />
-  <title>OptiStock Pro — Suite Logistique & Cuisine</title>
+  <meta name="theme-color" content="#090d16" />
+  <title>OptiStock Pro — Suite Logistique & Commandes</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&family=Libre+Barcode+128&display=swap" rel="stylesheet">
   <style id="dynamicPrintStyle">
@@ -14,7 +14,7 @@
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
     body {
       font-family: 'Inter', sans-serif;
-      background-color: #090e1a;
+      background-color: #090d16;
       color: #f8fafc;
       margin: 0;
       padding: 0;
@@ -81,225 +81,249 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between bg-[#090e1a] text-slate-100 select-none">
+<body class="min-h-screen flex flex-col justify-between bg-[#090d16] text-slate-100 select-none">
 
-  <!-- Zone d'impression (Étiquettes thermiques OU Bon de Commande Cuisine A4 PDF) -->
+  <!-- Zone d'impression (Étiquettes thermiques OU Bon de Commande A4 PDF) -->
   <div id="realPrintArea"></div>
 
   <!-- Inputs fichiers globaux compatibles WebView Android -->
   <input id="fileInputGallery" type="file" accept="image/*" class="offscreen-file-input" onchange="handleImageFile(event)" />
   <input id="fileInputCamera" type="file" accept="image/*" capture="environment" class="offscreen-file-input" onchange="handleImageFile(event)" />
-  <input id="fileInputKitchenPhoto" type="file" accept="image/*" class="offscreen-file-input" onchange="handleKitchenPhotoUpload(event)" />
 
   <!-- Conteneur Principal OptiStock Pro -->
-  <div id="appRoot" class="max-w-md w-full mx-auto min-h-screen flex flex-col bg-[#0d1323] shadow-2xl relative pb-20">
+  <div id="appRoot" class="max-w-md w-full mx-auto min-h-screen flex flex-col bg-[#0b111e] shadow-2xl relative pb-20">
 
-    <!-- En-tête Professionnel (Sans barre d'heure ni badges superflus) -->
-    <header class="px-4 py-3 bg-[#0f172a]/95 backdrop-blur border-b border-slate-800 flex items-center justify-between sticky top-0 z-30">
+    <!-- En-tête Exécutif -->
+    <header class="px-4 py-3 bg-[#0f172a]/95 backdrop-blur border-b border-slate-800/90 flex items-center justify-between sticky top-0 z-30">
       <div onclick="switchTab('accueil')" class="flex items-center gap-2.5 cursor-pointer">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 via-teal-400 to-emerald-500 flex items-center justify-center text-slate-950 font-black text-sm shadow-lg shadow-cyan-500/20">OS</div>
+        <div class="w-9 h-9 rounded-lg bg-slate-900 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-black text-xs tracking-tighter shadow-inner">
+          OS
+        </div>
         <div>
           <div class="flex items-center gap-1.5">
-            <h1 class="font-extrabold text-sm tracking-tight text-white">OptiStock <span class="text-cyan-400">Pro</span></h1>
-            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300 border border-slate-700">V3.0</span>
+            <h1 class="font-extrabold text-sm tracking-tight text-white">OptiStock <span class="text-cyan-400 font-semibold">Enterprise</span></h1>
+            <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v3.1</span>
           </div>
-          <p class="text-[11px] text-slate-400">Traçabilité DLC & Commandes Cuisine</p>
+          <p class="text-[10px] text-slate-400">Traçabilité Réception & Approvisionnement</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5">
-        <button type="button" onclick="toggleSortieDrawer(true)" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 flex items-center gap-1.5 text-xs font-semibold transition">
-          <span>📋 Sorties</span>
-          <span id="sortieCountBadge" class="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-bold">0</span>
-        </button>
-      </div>
+      <button type="button" onclick="toggleSortieDrawer(true)" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 flex items-center gap-1.5 text-xs font-semibold transition">
+        <span class="text-slate-300">Sorties DLC</span>
+        <span id="sortieCountBadge" class="px-1.5 py-0.2 rounded bg-rose-600 text-white text-[10px] mono font-bold">0</span>
+      </button>
     </header>
 
     <!-- Contenu Principal -->
     <main class="flex-1 p-3.5 space-y-3.5 overflow-y-auto">
 
-      <!-- ==================== ONGLET 0 : ÉCRAN D'ACCUEIL ==================== -->
+      <!-- ==================== ONGLET 0 : ÉCRAN D'ACCUEIL PRO ==================== -->
       <section id="tab-accueil" class="space-y-3.5">
-        <div class="p-4 rounded-2xl bg-gradient-to-br from-slate-900 via-[#111c35] to-slate-900 border border-slate-800 shadow-lg space-y-1">
-          <span class="text-[10px] font-extrabold uppercase tracking-widest text-cyan-400">Portail Central Cloud</span>
-          <h2 class="text-base font-black text-white">Que souhaitez-vous faire ?</h2>
-          <p class="text-xs text-slate-400">Toutes les données et photos sont synchronisées en temps réel sur les terminaux de l'équipe.</p>
+
+        <!-- Bandeau Statut Opérationnel & KPI -->
+        <div class="p-4 rounded-xl bg-[#0f172a] border border-slate-800 space-y-3 shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-2.5">
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Tableau de Bord Unifié</span>
+              <h2 class="text-sm font-extrabold text-white mt-0.5">Poste de Contrôle Logistique</h2>
+            </div>
+            <span id="homeQuickStatus" class="mono text-[10px] px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-400 border border-emerald-700/50 font-semibold">
+              ● CLOUD SYNCHRONISÉ
+            </span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div onclick="switchTab('verifier')" class="cursor-pointer p-2.5 rounded-lg bg-slate-950/90 border border-slate-800/90 hover:border-cyan-500/40 transition">
+              <div class="text-[10px] text-slate-400 font-medium">BL à imprimer</div>
+              <div class="flex items-baseline justify-between mt-1">
+                <span id="homeStatVerify" class="text-lg font-black text-white mono">0</span>
+                <span class="text-[9px] text-cyan-400 font-semibold">Réf.</span>
+              </div>
+            </div>
+            <div onclick="switchTab('historique')" class="cursor-pointer p-2.5 rounded-lg bg-slate-950/90 border border-slate-800/90 hover:border-emerald-500/40 transition">
+              <div class="text-[10px] text-slate-400 font-medium">Registre DLC</div>
+              <div class="flex items-baseline justify-between mt-1">
+                <span id="homeStatHistory" class="text-lg font-black text-white mono">0</span>
+                <span class="text-[9px] text-emerald-400 font-semibold">Lots</span>
+              </div>
+            </div>
+            <div onclick="switchTab('commande')" class="cursor-pointer p-2.5 rounded-lg bg-slate-950/90 border border-slate-800/90 hover:border-amber-500/40 transition">
+              <div class="text-[10px] text-slate-400 font-medium">Bon Commande</div>
+              <div class="flex items-baseline justify-between mt-1">
+                <span id="homeStatKitchen" class="text-lg font-black text-white mono">0</span>
+                <span class="text-[9px] text-amber-400 font-semibold">Unités</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- GROS BOUTON 1 : SCAN BL & ÉTIQUETTES -->
-        <button type="button" onclick="switchTab('scanner')" class="w-full p-4 rounded-2xl bg-gradient-to-r from-cyan-500/20 via-slate-900 to-slate-900 border border-cyan-500/40 hover:border-cyan-400 text-left flex items-center justify-between group active:scale-[0.99] transition shadow-lg">
-          <div class="flex items-center gap-3.5">
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-400 to-emerald-400 flex items-center justify-center text-2xl shadow-md shadow-cyan-500/25">
-              📷
-            </div>
-            <div>
-              <span class="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400">Réception & Traçabilité</span>
-              <h3 class="text-base font-black text-white">Scanner un Bon de Livraison</h3>
-              <p class="text-xs text-slate-400 mt-0.5">Transcription IA Gemini & impression d'étiquettes DLC</p>
-            </div>
-          </div>
-          <span class="text-cyan-400 text-lg font-bold">→</span>
-        </button>
+        <!-- Modules Métier Principaux -->
+        <div class="space-y-2.5">
+          <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Modules d'Exploitation</div>
 
-        <!-- GROS BOUTON 2 : COMMANDE CUISINE RESTAURANT (PDF) -->
-        <button type="button" onclick="switchTab('commande')" class="w-full p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-slate-900 to-slate-900 border border-amber-500/40 hover:border-amber-400 text-left flex items-center justify-between group active:scale-[0.99] transition shadow-lg">
-          <div class="flex items-center gap-3.5">
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-2xl shadow-md shadow-amber-500/25">
-              👨‍🍳
+          <!-- MODULE 1 : SCAN BL & ÉTIQUETTES -->
+          <button type="button" onclick="switchTab('scanner')" class="w-full p-3.5 rounded-xl bg-[#0f172a] hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-left flex items-center justify-between active:scale-[0.99] transition shadow-sm">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-sm mono">
+                OCR
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-bold text-white">Numérisation Bon de Livraison</h3>
+                  <span class="text-[9px] mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">GEMINI 3.0</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">Extraction DLC, étiquetage thermique & ajout auto au catalogue</p>
+              </div>
             </div>
-            <div>
-              <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">Cuisine & Restaurant</span>
-              <h3 class="text-base font-black text-white">Commande Produits Cuisine</h3>
-              <p class="text-xs text-slate-400 mt-0.5">Catalogue visuel avec photos, ajout rapide & export PDF</p>
-            </div>
-          </div>
-          <span class="text-amber-400 text-lg font-bold">→</span>
-        </button>
+            <span class="text-slate-500 text-sm font-bold">›</span>
+          </button>
 
-        <!-- GROS BOUTON 3 : ÉTAT DES SERVICES, VERSION, ACTUALISATION & APK -->
-        <button type="button" onclick="switchTab('reglages')" class="w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-slate-900 to-slate-900 border border-emerald-500/35 hover:border-emerald-400 text-left flex items-center justify-between active:scale-[0.99] transition shadow-lg">
-          <div class="flex items-center gap-3.5">
-            <div class="w-14 h-14 rounded-2xl bg-slate-800 border border-emerald-500/40 flex items-center justify-center text-2xl">
-              ⚡
+          <!-- MODULE 2 : COMMANDE PRODUITS & EXPORT PDF -->
+          <button type="button" onclick="switchTab('commande')" class="w-full p-3.5 rounded-xl bg-[#0f172a] hover:bg-slate-900 border border-slate-800 hover:border-amber-500/50 text-left flex items-center justify-between active:scale-[0.99] transition shadow-sm">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-sm mono">
+                CMD
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-bold text-white">Référentiel & Bon de Commande</h3>
+                  <span id="homeCatalogCountBadge" class="text-[9px] mono px-1.5 py-0.5 rounded bg-slate-800 text-amber-300 border border-slate-700">0 article</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">Saisie en ligne par conditionnement & édition PDF A4</p>
+              </div>
             </div>
-            <div>
-              <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400">Système & Maintenance</span>
-              <h3 class="text-base font-black text-white">État des Services & Mise à jour APK</h3>
-              <p class="text-xs text-slate-400 mt-0.5">Statut Cloud, version, actualisation & dernier APK GitHub</p>
-            </div>
-          </div>
-          <span class="text-emerald-400 text-lg font-bold">→</span>
-        </button>
+            <span class="text-slate-500 text-sm font-bold">›</span>
+          </button>
 
-        <!-- Résumé rapide + Actions directes d'actualisation et téléchargement APK depuis l'accueil -->
-        <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold uppercase tracking-wider text-slate-300">Accès Rapide Système</span>
-            <span class="mono text-[11px] text-emerald-400 font-bold" id="homeQuickStatus">● TOUS SERVICES OK</span>
-          </div>
+          <!-- MODULE 3 : ÉTAT DES SERVICES, CONFIGURATION & APK -->
+          <button type="button" onclick="switchTab('reglages')" class="w-full p-3.5 rounded-xl bg-[#0f172a] hover:bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-left flex items-center justify-between active:scale-[0.99] transition shadow-sm">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-sm mono">
+                SYS
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-white">État des Services & Paramètres</h3>
+                <p class="text-[11px] text-slate-400 mt-0.5">Formats d'étiquettes sur-mesure, diagnostic Cloud & version</p>
+              </div>
+            </div>
+            <span class="text-slate-500 text-sm font-bold">›</span>
+          </button>
+        </div>
 
-          <div class="grid grid-cols-3 gap-2 text-center">
-            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-              <div class="text-[10px] text-slate-400">En attente BL</div>
-              <div id="homeStatVerify" class="text-sm font-black text-cyan-400 mono">0</div>
-            </div>
-            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-              <div class="text-[10px] text-slate-400">Historique DLC</div>
-              <div id="homeStatHistory" class="text-sm font-black text-emerald-400 mono">0</div>
-            </div>
-            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-              <div class="text-[10px] text-slate-400">Panier Cuisine</div>
-              <div id="homeStatKitchen" class="text-sm font-black text-amber-400 mono">0</div>
-            </div>
+        <!-- Console de Maintenance & Déploiement Rapide -->
+        <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="font-bold uppercase tracking-wider text-slate-400">Maintenance & Déploiement</span>
+            <span class="mono text-slate-400">Build v3.1.0-prod</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button type="button" onclick="softRefreshUI()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-300">
-              🔄 Actualiser données
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="softRefreshUI()" class="py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-semibold text-slate-200 flex items-center justify-center gap-1.5">
+              <span>🔄 Sync. Manuelle</span>
             </button>
-            <button type="button" onclick="hardForceRefresh()" class="py-2.5 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-xs font-bold text-rose-300">
-              ⚡ Recharger l'interface
+            <button type="button" onclick="hardForceRefresh()" class="py-2 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-semibold text-rose-300 flex items-center justify-center gap-1.5">
+              <span>⚡ Recharger UI</span>
             </button>
           </div>
 
-          <button type="button" onclick="downloadLatestApk()" class="w-full py-2.5 px-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-extrabold text-emerald-300 flex items-center justify-center gap-2">
-            <span>📲 Télécharger le dernier OptiStock-Pro.apk (GitHub)</span>
+          <button type="button" onclick="downloadLatestApk()" class="w-full py-2.5 px-3 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-xs font-bold text-emerald-300 flex items-center justify-center gap-2 transition">
+            <span>📥 Télécharger la dernière release OptiStock-Pro.apk</span>
           </button>
         </div>
       </section>
 
-      <!-- ==================== ONGLET CUISINE : COMMANDE RESTAURANT ==================== -->
+      <!-- ==================== ONGLET COMMANDE : LISTE EN LIGNE SANS IMAGES ==================== -->
       <section id="tab-commande" class="hidden space-y-3">
-        <div class="p-3.5 rounded-2xl bg-slate-900/95 border border-amber-500/30 space-y-2.5">
+        <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-[10px] uppercase tracking-wider text-amber-400 font-extrabold">Approvisionnement Cuisine & Restaurant</p>
-              <h2 class="text-sm font-black text-white">Catalogue Produits & Bon de Commande</h2>
+              <p class="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Référentiel Auto-Alimenté par Scan BL</p>
+              <h2 class="text-sm font-extrabold text-white">Préparation de Commande (<span id="kitchenTotalCatalogCount">0</span> réf.)</h2>
             </div>
-            <button type="button" onclick="openKitchenModal()" class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-md flex items-center gap-1">
-              <span>+ Nouveau Produit</span>
+            <button type="button" onclick="openKitchenModal()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow">
+              + Nouveau Produit
             </button>
           </div>
 
-          <!-- Recherche Cuisine -->
+          <!-- Recherche -->
           <div class="relative">
-            <input id="kitchenSearchInput" type="text" oninput="renderKitchen()" placeholder="Rechercher un ingrédient, viande, légume, boisson..." class="w-full pl-3 pr-8 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-amber-400" />
+            <input id="kitchenSearchInput" type="text" oninput="renderKitchen()" placeholder="Filtrer par désignation, conditionnement ou catégorie..." class="w-full pl-3 pr-8 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-amber-400" />
             <button type="button" onclick="document.getElementById('kitchenSearchInput').value=''; renderKitchen();" class="absolute right-2.5 top-2 text-slate-500 text-xs">✕</button>
           </div>
 
-          <!-- Catégories Cuisine -->
-          <div class="flex gap-1.5 overflow-x-auto pb-1 text-[11px] font-bold">
-            <button type="button" onclick="setKitchenCategory('ALL')" id="kcat-ALL" class="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 whitespace-nowrap">Tous</button>
-            <button type="button" onclick="setKitchenCategory('Viandes & Poissons')" id="kcat-Viandes & Poissons" class="px-3 py-1.5 rounded-xl bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">🥩 Viandes & Poissons</button>
-            <button type="button" onclick="setKitchenCategory('Fruits & Légumes')" id="kcat-Fruits & Légumes" class="px-3 py-1.5 rounded-xl bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">🥬 Fruits & Légumes</button>
-            <button type="button" onclick="setKitchenCategory('Crèmerie & Frais')" id="kcat-Crèmerie & Frais" class="px-3 py-1.5 rounded-xl bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">🧀 Crèmerie & Frais</button>
-            <button type="button" onclick="setKitchenCategory('Épicerie & Sec')" id="kcat-Épicerie & Sec" class="px-3 py-1.5 rounded-xl bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">🌾 Épicerie & Sec</button>
-            <button type="button" onclick="setKitchenCategory('Boissons')" id="kcat-Boissons" class="px-3 py-1.5 rounded-xl bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">🍾 Boissons</button>
-            <button type="button" onclick="setKitchenCategory('Hygiène & Emballage')" id="kcat-Hygiène & Emballage" class="px-3 py-1.5 rounded-xl bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">🧼 Hygiène</button>
+          <!-- Filtres Catégories -->
+          <div class="flex gap-1.5 overflow-x-auto pb-1 text-[11px] font-semibold">
+            <button type="button" onclick="setKitchenCategory('ALL')" id="kcat-ALL" class="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 whitespace-nowrap font-bold">Tous</button>
+            <button type="button" onclick="setKitchenCategory('Viandes & Poissons')" id="kcat-Viandes & Poissons" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">Viandes & Poissons</button>
+            <button type="button" onclick="setKitchenCategory('Fruits & Légumes')" id="kcat-Fruits & Légumes" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">Fruits & Légumes</button>
+            <button type="button" onclick="setKitchenCategory('Crèmerie & Frais')" id="kcat-Crèmerie & Frais" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">Crèmerie & Frais</button>
+            <button type="button" onclick="setKitchenCategory('Épicerie & Sec')" id="kcat-Épicerie & Sec" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">Épicerie & Sec</button>
+            <button type="button" onclick="setKitchenCategory('Boissons')" id="kcat-Boissons" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">Boissons</button>
+            <button type="button" onclick="setKitchenCategory('Hygiène & Emballage')" id="kcat-Hygiène & Emballage" class="px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap">Hygiène</button>
           </div>
         </div>
 
-        <!-- Grille des produits de la cuisine avec photo -->
-        <div id="kitchenGridContainer" class="grid grid-cols-2 gap-2.5"></div>
+        <!-- Liste des produits en ligne (SANS IMAGE) -->
+        <div id="kitchenListContainer" class="space-y-1.5"></div>
 
-        <!-- Barre flottante de génération du Bon de Commande PDF -->
-        <div class="p-3.5 rounded-2xl bg-slate-900 border border-amber-500/40 space-y-2.5 sticky bottom-2 z-20 shadow-2xl">
+        <!-- Barre d'export PDF -->
+        <div class="p-3.5 rounded-xl bg-[#0f172a] border border-amber-500/40 space-y-2.5 sticky bottom-2 z-20 shadow-2xl">
           <div class="flex items-center justify-between text-xs">
             <div>
-              <span class="text-slate-400">Sélection commande :</span>
-              <strong id="kitchenCartSummary" class="text-amber-400 ml-1 font-extrabold">0 produit (0 unité)</strong>
+              <span class="text-slate-400">Total sélection :</span>
+              <strong id="kitchenCartSummary" class="text-amber-400 ml-1 font-extrabold">0 ligne (0 unité)</strong>
             </div>
-            <button type="button" onclick="clearKitchenCart()" class="text-[11px] text-rose-400 hover:underline font-semibold">Réinitialiser</button>
+            <button type="button" onclick="clearKitchenCart()" class="text-[11px] text-rose-400 hover:underline font-semibold">Tout remettre à 0</button>
           </div>
-          <button type="button" onclick="exportKitchenOrderPDF()" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
-            <span>📄 Générer la Liste de Commande en PDF</span>
+          <button type="button" onclick="exportKitchenOrderPDF()" class="w-full py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg flex items-center justify-center gap-2">
+            <span>📄 Exporter le Bon de Commande (PDF A4)</span>
           </button>
         </div>
       </section>
 
       <!-- ==================== ONGLET 1 : SCANNER CAMÉRA ==================== -->
       <section id="tab-scanner" class="hidden space-y-3">
-        <div class="relative rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 aspect-[3/4] flex flex-col justify-between shadow-inner">
+        <div class="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 aspect-[3/4] flex flex-col justify-between shadow-inner">
           <video id="cameraStream" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover hidden"></video>
           <img id="capturedPreview" alt="Aperçu BL" class="absolute inset-0 w-full h-full object-contain bg-slate-950 hidden" />
 
           <div id="cameraPlaceholder" class="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
-            <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-3xl mb-3">📷</div>
-            <p class="text-sm font-bold text-slate-200">Prêt à scanner votre Bon de Livraison</p>
-            <p class="text-xs text-slate-400 mt-1 max-w-xs">Activez le viseur direct ou prenez une photo pour extraire automatiquement vos produits et DLC.</p>
-            <button type="button" onclick="startLiveCamera(true)" class="mt-4 px-4 py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-xs font-bold active:scale-95 transition">
+            <div class="w-14 h-14 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-2xl mb-3">📷</div>
+            <p class="text-sm font-bold text-slate-200">Numérisation de Bon de Livraison</p>
+            <p class="text-xs text-slate-400 mt-1 max-w-xs">Les produits scannés prépareront vos étiquettes DLC et s'ajouteront automatiquement à votre catalogue de commande.</p>
+            <button type="button" onclick="startLiveCamera(true)" class="mt-4 px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 text-xs font-bold active:scale-95 transition">
               Activer le viseur caméra direct
             </button>
           </div>
 
           <div class="laser-line"></div>
           <div class="relative z-20 p-3 flex justify-between items-center bg-gradient-to-b from-black/70 to-transparent">
-            <span class="text-[11px] mono px-2 py-0.5 rounded bg-black/60 text-cyan-300 border border-cyan-500/30">GEMINI 2.5 FLASH • OCR</span>
+            <span class="text-[10px] mono px-2 py-0.5 rounded bg-black/70 text-cyan-300 border border-cyan-500/30">GEMINI 3.0 FLASH • OCR</span>
             <button type="button" onclick="syncFromCloud(true)" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-300 active:scale-95">
               🔄 Sync Cloud
             </button>
           </div>
 
           <div id="scanLoadingOverlay" class="hidden absolute inset-0 z-30 bg-slate-950/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
-            <div class="w-12 h-12 rounded-full border-4 border-cyan-400 border-t-transparent animate-spin mb-3"></div>
-            <p class="text-sm font-bold text-white">Transcription Gemini Vision en cours...</p>
-            <p class="text-xs text-cyan-300 mt-1 mono">Extraction des produits et dates DLC...</p>
+            <div class="w-11 h-11 rounded-full border-4 border-cyan-400 border-t-transparent animate-spin mb-3"></div>
+            <p class="text-sm font-bold text-white">Analyse Gemini 3.0 Flash en cours...</p>
+            <p class="text-xs text-cyan-300 mt-1 mono">Extraction des lignes, DLC et conditionnements...</p>
           </div>
 
           <div class="relative z-20 p-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent flex items-center justify-around">
             <button type="button" onclick="openGalleryPicker()" class="flex flex-col items-center gap-1 text-[11px] text-slate-300 active:scale-95 transition">
-              <div class="w-12 h-12 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-lg shadow">🖼️</div>
+              <div class="w-11 h-11 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-base shadow">🖼️</div>
               <span>Photo / Fichier</span>
             </button>
 
             <button type="button" onclick="triggerCapture()" class="p-1.5 rounded-full border-4 border-cyan-400 bg-cyan-500/20 active:scale-95 transition flex items-center justify-center shadow-lg shadow-cyan-500/30">
-              <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-sm tracking-wider">
+              <div class="w-15 h-15 px-4 py-5 rounded-full bg-gradient-to-tr from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-xs tracking-wider">
                 SCAN
               </div>
             </button>
 
             <button type="button" onclick="openNativeCameraPicker()" class="flex flex-col items-center gap-1 text-[11px] text-slate-300 active:scale-95 transition">
-              <div class="w-12 h-12 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-lg shadow">📸</div>
+              <div class="w-11 h-11 rounded-full bg-slate-800/90 border border-slate-600 flex items-center justify-center text-base shadow">📸</div>
               <span>Appareil HD</span>
             </button>
           </div>
@@ -310,53 +334,52 @@
 
       <!-- ==================== ONGLET 2 : VÉRIFIER & ÉTIQUETTES ==================== -->
       <section id="tab-verifier" class="hidden space-y-3">
-        <div class="p-3 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+        <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 flex items-center justify-between">
           <div>
-            <p class="text-[11px] uppercase tracking-wider text-cyan-400 font-bold">Vérification & Impression (<span id="labelFormatTitleBadge">50×30 mm</span>)</p>
+            <p class="text-[10px] uppercase tracking-wider text-cyan-400 font-bold">Vérification & Impression (<span id="labelFormatTitleBadge">50×30 mm</span>)</p>
             <h2 class="text-sm font-bold text-white"><span id="verifyTotalRefs">0</span> réf. • <span id="verifyTotalLabels" class="text-emerald-400">0</span> étiquette(s)</h2>
           </div>
           <div class="flex gap-1.5">
-            <button type="button" onclick="openItemModal()" class="px-2.5 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold">+ Ajouter</button>
-            <button type="button" onclick="printAllVerifyLabels()" class="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">🖨️ Imprimer</button>
+            <button type="button" onclick="openItemModal()" class="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-bold">+ Ajouter</button>
+            <button type="button" onclick="printAllVerifyLabels()" class="px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-extrabold text-xs">🖨️ Imprimer</button>
           </div>
         </div>
 
-        <div id="verifyListContainer" class="space-y-2.5"></div>
+        <div id="verifyListContainer" class="space-y-2"></div>
       </section>
 
       <!-- ==================== ONGLET 3 : HISTORIQUE ==================== -->
       <section id="tab-historique" class="hidden space-y-3">
-        <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+        <div class="p-3.5 rounded-xl bg-[#0f172a] border border-slate-800 space-y-3">
           <div class="flex items-center justify-between gap-2">
             <div>
               <p class="text-[10px] uppercase tracking-wider text-cyan-400 font-bold">Registre Cloud Partagé</p>
               <h2 class="text-sm font-extrabold text-white"><span id="historyTotalCount">0</span> lots d'étiquettes générés</h2>
             </div>
-            <button type="button" onclick="moveAllExpiredToSortie()" class="px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/25 flex items-center gap-1.5">
-              <span>📤 Sortir les dates passées</span>
+            <button type="button" onclick="moveAllExpiredToSortie()" class="px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow flex items-center gap-1.5">
+              <span>📤 Sortir dates passées</span>
             </button>
           </div>
 
           <div class="relative">
-            <input id="historySearchInput" type="text" oninput="renderHistory()" placeholder="Rechercher un produit, n° de lot ou BL..." class="w-full pl-3 pr-8 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500" />
+            <input id="historySearchInput" type="text" oninput="renderHistory()" placeholder="Rechercher un produit, n° de lot ou BL..." class="w-full pl-3 pr-8 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-cyan-500" />
             <button type="button" onclick="document.getElementById('historySearchInput').value=''; renderHistory();" class="absolute right-2.5 top-2 text-slate-500 text-xs">✕</button>
           </div>
 
-          <div class="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px] font-bold">
-            <button type="button" id="filter-all" onclick="setHistoryFilter('all')" class="py-1.5 rounded-lg bg-cyan-500 text-slate-950">Toutes (0)</button>
-            <button type="button" id="filter-expired" onclick="setHistoryFilter('expired')" class="py-1.5 rounded-lg text-slate-400">Passées (0)</button>
-            <button type="button" id="filter-short" onclick="setHistoryFilter('short')" class="py-1.5 rounded-lg text-slate-400">Courtes (0)</button>
-            <button type="button" id="filter-valid" onclick="setHistoryFilter('valid')" class="py-1.5 rounded-lg text-slate-400">Valides (0)</button>
+          <div class="grid grid-cols-4 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px] font-bold">
+            <button type="button" id="filter-all" onclick="setHistoryFilter('all')" class="py-1.5 rounded bg-cyan-500 text-slate-950">Toutes (0)</button>
+            <button type="button" id="filter-expired" onclick="setHistoryFilter('expired')" class="py-1.5 rounded text-slate-400">Passées (0)</button>
+            <button type="button" id="filter-short" onclick="setHistoryFilter('short')" class="py-1.5 rounded text-slate-400">Courtes (0)</button>
+            <button type="button" id="filter-valid" onclick="setHistoryFilter('valid')" class="py-1.5 rounded text-slate-400">Valides (0)</button>
           </div>
         </div>
 
-        <div id="historyListContainer" class="space-y-2.5"></div>
+        <div id="historyListContainer" class="space-y-2"></div>
       </section>
 
       <!-- ==================== ONGLET 4 : SERVICES, ROULEAU SUR-MESURE & APK ==================== -->
       <section id="tab-reglages" class="hidden space-y-3">
-        <!-- Formats de rouleau + Dimensions sur-mesure -->
-        <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+        <div class="p-4 rounded-xl bg-[#0f172a] border border-slate-800 space-y-3">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-extrabold uppercase tracking-wider text-cyan-400">Format du Rouleau d'Étiquettes</h3>
             <span id="activeRollDimBadge" class="mono text-[11px] px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">50 × 30 mm</span>
@@ -364,7 +387,7 @@
 
           <div>
             <label class="text-[11px] text-slate-400 block mb-1.5">Formats standards & Sur-Mesure :</label>
-            <select id="rollFormatSelect" onchange="changeRollFormat(this.value)" class="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white font-semibold focus:outline-none focus:border-cyan-400">
+            <select id="rollFormatSelect" onchange="changeRollFormat(this.value)" class="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white font-semibold focus:outline-none focus:border-cyan-400">
               <option value="30x20">30 × 20 mm — Mini Étiquette Prix / Date</option>
               <option value="40x20">40 × 20 mm — Petit Rouleau Standard</option>
               <option value="40x30">40 × 30 mm — Rouleau Compact (Niimbot / Phomemo)</option>
@@ -382,61 +405,56 @@
             </select>
           </div>
 
-          <!-- Bloc Format Sur-Mesure -->
-          <div id="customRollBox" class="hidden p-3 rounded-xl bg-slate-950 border border-cyan-500/40 space-y-2.5">
-            <div class="text-[11px] font-bold text-cyan-300">Dimensions personnalisées du rouleau (en millimètres) :</div>
+          <div id="customRollBox" class="hidden p-3 rounded-lg bg-slate-950 border border-cyan-500/40 space-y-2.5">
+            <div class="text-[11px] font-bold text-cyan-300">Dimensions personnalisées (en mm) :</div>
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="text-[10px] text-slate-400">Largeur (mm)</label>
-                <input id="customRollWidth" type="number" min="15" max="210" value="55" class="w-full mt-0.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white mono" />
+                <input id="customRollWidth" type="number" min="15" max="210" value="55" class="w-full mt-0.5 px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-xs text-white mono" />
               </div>
               <div>
                 <label class="text-[10px] text-slate-400">Hauteur (mm)</label>
-                <input id="customRollHeight" type="number" min="10" max="300" value="35" class="w-full mt-0.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white mono" />
+                <input id="customRollHeight" type="number" min="10" max="300" value="35" class="w-full mt-0.5 px-3 py-1.5 rounded bg-slate-900 border border-slate-700 text-xs text-white mono" />
               </div>
             </div>
-            <button type="button" onclick="applyCustomRollDimensions()" class="w-full py-2 rounded-lg bg-cyan-500 text-slate-950 font-extrabold text-xs">
+            <button type="button" onclick="applyCustomRollDimensions()" class="w-full py-2 rounded bg-cyan-500 text-slate-950 font-extrabold text-xs">
               Appliquer ce format sur-mesure
             </button>
           </div>
         </div>
 
         <!-- État de tous les services -->
-        <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+        <div class="p-4 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2.5">
           <div class="flex items-center justify-between">
-            <h3 class="text-xs font-extrabold uppercase tracking-wider text-emerald-400">État de Tous les Services</h3>
-            <button type="button" onclick="testCloudHealth()" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold border border-slate-700">
-              Tester les services
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-emerald-400">État des Services Cloud</h3>
+            <button type="button" onclick="testCloudHealth()" class="text-[11px] px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold border border-slate-700">
+              Tester latence
             </button>
           </div>
 
-          <div class="space-y-2 text-xs">
-            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
-              <span>Moteur OCR Gemini Vision (`/scan`)</span>
+          <div class="space-y-1.5 text-xs">
+            <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800/80">
+              <span>Moteur OCR Gemini 3.0 Flash (`/scan`)</span>
               <span id="statusScanApi" class="mono text-[11px] text-emerald-400 font-bold">OPÉRATIONNEL</span>
             </div>
-            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+            <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800/80">
               <span>Base Cloud KV Équipe (`/state`)</span>
               <span id="statusStateApi" class="mono text-[11px] text-emerald-400 font-bold">SYNCHRONISÉ</span>
             </div>
-            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
-              <span>Catalogue & Commandes Cuisine PDF</span>
-              <span class="mono text-[11px] text-emerald-400 font-bold">ACTIF • CLOUD</span>
-            </div>
-            <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800/80">
+            <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800/80">
               <span>Spooler d'Impression Android / PDF</span>
-              <span id="statusPrinterEngine" class="mono text-[11px] text-cyan-300 font-bold">PRÊT</span>
+              <span class="mono text-[11px] text-cyan-300 font-bold">PRÊT</span>
             </div>
           </div>
         </div>
 
         <!-- Version, Actualisation & Téléchargement du dernier APK GitHub -->
-        <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
-          <h3 class="text-xs font-extrabold uppercase tracking-wider text-cyan-400">Version, Maintenance & Téléchargement APK</h3>
+        <div class="p-4 rounded-xl bg-[#0f172a] border border-slate-800 space-y-3">
+          <h3 class="text-xs font-extrabold uppercase tracking-wider text-cyan-400">Maintenance & Téléchargement APK</h3>
 
           <div class="flex items-center justify-between text-xs">
-            <span class="text-slate-400">Nom & Version</span>
-            <span class="mono font-bold text-white">OptiStock Pro v3.0.0 (SDK 34)</span>
+            <span class="text-slate-400">Version installée</span>
+            <span class="mono font-bold text-white">OptiStock Pro v3.1.0 (SDK 34)</span>
           </div>
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-400">Dernière synchro Cloud</span>
@@ -444,20 +462,19 @@
           </div>
 
           <div class="grid grid-cols-2 gap-2 pt-1">
-            <button type="button" onclick="softRefreshUI()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-300">
+            <button type="button" onclick="softRefreshUI()" class="py-2.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-cyan-300">
               🔄 Actualisation manuelle
             </button>
-            <button type="button" onclick="hardForceRefresh()" class="py-2.5 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-xs font-bold text-rose-300">
+            <button type="button" onclick="hardForceRefresh()" class="py-2.5 px-3 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-xs font-bold text-rose-300">
               ⚡ Recharger l'interface
             </button>
           </div>
 
-          <!-- Configuration du dépôt GitHub pour le téléchargement direct de l'APK -->
           <div class="pt-2 border-t border-slate-800 space-y-2">
-            <label class="text-[11px] text-slate-400 block">Dépôt GitHub (au format `utilisateur/depot`) pour télécharger le dernier APK :</label>
-            <input id="githubRepoInput" type="text" placeholder="ex: LeeLooV/scanbl-labelpro" onchange="saveGithubRepo(this.value)" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white mono" />
-            <button type="button" onclick="downloadLatestApk()" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-black text-xs shadow-lg flex items-center justify-center gap-2">
-              <span>📥 Télécharger le dernier OptiStock-Pro.apk généré</span>
+            <label class="text-[11px] text-slate-400 block">Dépôt GitHub (`utilisateur/depot`) pour récupérer l'APK :</label>
+            <input id="githubRepoInput" type="text" placeholder="ex: LeeLooV/scanbl-labelpro" onchange="saveGithubRepo(this.value)" class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white mono" />
+            <button type="button" onclick="downloadLatestApk()" class="w-full py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow flex items-center justify-center gap-2">
+              <span>📥 Télécharger le dernier OptiStock-Pro.apk</span>
             </button>
           </div>
         </div>
@@ -465,13 +482,13 @@
 
     </main>
 
-    <!-- Barre de Navigation Inférieure (5 Onglets) -->
-    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#0b1120]/95 backdrop-blur border-t border-slate-800 grid grid-cols-5 py-1.5 z-30 text-[10px]">
+    <!-- Barre de Navigation Inférieure -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#090d16]/95 backdrop-blur border-t border-slate-800 grid grid-cols-5 py-1.5 z-30 text-[10px]">
       <button type="button" onclick="switchTab('accueil')" id="nav-accueil" class="flex flex-col items-center py-1 text-cyan-400 font-bold">
         <span class="text-base">🏠</span><span>Accueil</span>
       </button>
       <button type="button" onclick="switchTab('commande')" id="nav-commande" class="relative flex flex-col items-center py-1 text-slate-400">
-        <span class="text-base">👨‍🍳</span><span>Commande</span>
+        <span class="text-base">📋</span><span>Commande</span>
         <span id="badgeKitchenNav" class="hidden absolute top-0.5 right-2.5 px-1.5 rounded-full bg-amber-500 text-slate-950 text-[9px] font-extrabold">0</span>
       </button>
       <button type="button" onclick="switchTab('scanner')" id="nav-scanner" class="flex flex-col items-center py-1 text-slate-400">
@@ -487,83 +504,74 @@
     </nav>
   </div>
 
-  <!-- Modal Création d'un Nouveau Produit Cuisine avec Dépôt de Photo -->
+  <!-- Modal Ajout / Modification d'un Produit dans Commande (Sans Image) -->
   <div id="kitchenModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 space-y-3">
-      <h3 class="text-sm font-extrabold text-white">Nouveau Produit Cuisine</h3>
-
-      <!-- Zone de Dépôt Photo Direct -->
-      <div onclick="document.getElementById('fileInputKitchenPhoto').click()" class="cursor-pointer rounded-xl border-2 border-dashed border-amber-500/40 hover:border-amber-400 bg-slate-950 p-3 flex flex-col items-center justify-center text-center relative overflow-hidden h-32">
-        <img id="kitchenModalPreviewImg" class="hidden absolute inset-0 w-full h-full object-cover" />
-        <div id="kitchenModalPhotoPrompt" class="space-y-1">
-          <div class="text-2xl">📸</div>
-          <div class="text-xs font-bold text-amber-300">Déposer ou prendre une photo</div>
-          <div class="text-[10px] text-slate-400">Compression automatique pour le Cloud</div>
-        </div>
-      </div>
+    <div class="bg-slate-900 border border-slate-700 rounded-xl max-w-sm w-full p-4 space-y-3">
+      <h3 id="kModalTitle" class="text-sm font-extrabold text-white">Ajouter un produit au référentiel</h3>
+      <input type="hidden" id="kModalEditId" />
 
       <div>
-        <label class="text-[11px] text-slate-400">Nom du produit</label>
-        <input id="kModalName" type="text" placeholder="ex: Filet de Bœuf, Crème Liquide 35%..." class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white" />
+        <label class="text-[11px] text-slate-400">Désignation du produit</label>
+        <input id="kModalName" type="text" placeholder="ex: Crème Liquide 35%, Filet de Poulet..." class="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white" />
       </div>
 
       <div class="grid grid-cols-2 gap-2">
         <div>
-          <label class="text-[11px] text-slate-400">Catégorie</label>
-          <select id="kModalCat" class="w-full mt-1 px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white">
-            <option value="Viandes & Poissons">🥩 Viandes & Poissons</option>
-            <option value="Fruits & Légumes">🥬 Fruits & Légumes</option>
-            <option value="Crèmerie & Frais">🧀 Crèmerie & Frais</option>
-            <option value="Épicerie & Sec">🌾 Épicerie & Sec</option>
-            <option value="Boissons">🍾 Boissons</option>
-            <option value="Hygiène & Emballage">🧼 Hygiène & Emballage</option>
-          </select>
+          <label class="text-[11px] text-slate-400">Conditionnement</label>
+          <input id="kModalUnit" type="text" placeholder="ex: Colis 5kg, Carton x6..." value="Colis" class="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white" />
         </div>
         <div>
-          <label class="text-[11px] text-slate-400">Conditionnement / Unité</label>
-          <input id="kModalUnit" type="text" placeholder="ex: Colis 5kg, Carton x6, Kg..." value="Colis" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white" />
+          <label class="text-[11px] text-slate-400">Catégorie</label>
+          <select id="kModalCat" class="w-full mt-1 px-2.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white">
+            <option value="Viandes & Poissons">Viandes & Poissons</option>
+            <option value="Fruits & Légumes">Fruits & Légumes</option>
+            <option value="Crèmerie & Frais">Crèmerie & Frais</option>
+            <option value="Épicerie & Sec">Épicerie & Sec</option>
+            <option value="Boissons">Boissons</option>
+            <option value="Hygiène & Emballage">Hygiène & Emballage</option>
+          </select>
         </div>
       </div>
 
       <div class="flex justify-end gap-2 pt-2">
-        <button type="button" onclick="closeKitchenModal()" class="px-3 py-2 rounded-xl bg-slate-800 text-xs text-slate-300">Annuler</button>
-        <button type="button" onclick="saveNewKitchenProduct()" class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs">Enregistrer le produit</button>
+        <button type="button" onclick="closeKitchenModal()" class="px-3 py-2 rounded-lg bg-slate-800 text-xs text-slate-300">Annuler</button>
+        <button type="button" onclick="saveKitchenProductModal()" class="px-4 py-2 rounded-lg bg-amber-500 text-slate-950 font-extrabold text-xs">Enregistrer</button>
       </div>
     </div>
   </div>
 
   <!-- Modal Ajout / Édition d'étiquette BL -->
   <div id="itemModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 space-y-3">
+    <div class="bg-slate-900 border border-slate-700 rounded-xl max-w-sm w-full p-4 space-y-3">
       <h3 class="text-sm font-extrabold text-white">Ajouter / Modifier une étiquette</h3>
       <input type="hidden" id="modalItemId" />
       <div>
         <label class="text-[11px] text-slate-400">Désignation du produit</label>
-        <input id="modalName" type="text" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white" />
+        <input id="modalName" type="text" class="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white" />
       </div>
       <div class="grid grid-cols-2 gap-2">
         <div>
           <label class="text-[11px] text-slate-400">DLC / DLUO</label>
-          <input id="modalDlc" type="date" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white" />
+          <input id="modalDlc" type="date" class="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white" />
         </div>
         <div>
           <label class="text-[11px] text-slate-400">Reçu le</label>
-          <input id="modalReceived" type="date" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white" />
+          <input id="modalReceived" type="date" class="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white" />
         </div>
       </div>
       <div class="grid grid-cols-2 gap-2">
         <div>
           <label class="text-[11px] text-slate-400">N° de Lot</label>
-          <input id="modalLot" type="text" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white mono" />
+          <input id="modalLot" type="text" class="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white mono" />
         </div>
         <div>
           <label class="text-[11px] text-slate-400">Qté d'étiquettes</label>
-          <input id="modalQty" type="number" min="1" value="1" class="w-full mt-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white mono" />
+          <input id="modalQty" type="number" min="1" value="1" class="w-full mt-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white mono" />
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-2">
-        <button type="button" onclick="closeItemModal()" class="px-3 py-2 rounded-xl bg-slate-800 text-xs text-slate-300">Annuler</button>
-        <button type="button" onclick="saveItemModal()" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">Enregistrer</button>
+        <button type="button" onclick="closeItemModal()" class="px-3 py-2 rounded-lg bg-slate-800 text-xs text-slate-300">Annuler</button>
+        <button type="button" onclick="saveItemModal()" class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-bold text-xs">Enregistrer</button>
       </div>
     </div>
   </div>
@@ -577,12 +585,12 @@
             <h3 class="text-sm font-extrabold text-white">Liste de Retrait / Dates Passées</h3>
             <p class="text-[11px] text-slate-400">Synchronisée sur tous les terminaux</p>
           </div>
-          <button type="button" onclick="toggleSortieDrawer(false)" class="px-2.5 py-1 rounded-lg bg-slate-800 text-xs">Fermer</button>
+          <button type="button" onclick="toggleSortieDrawer(false)" class="px-2.5 py-1 rounded bg-slate-800 text-xs">Fermer</button>
         </div>
         <div id="sortieDrawerList" class="space-y-2"></div>
       </div>
       <div class="pt-3 border-t border-slate-800 space-y-2">
-        <button type="button" onclick="printSortieTicket()" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs">
+        <button type="button" onclick="printSortieTicket()" class="w-full py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs">
           🖨️ Imprimer le ticket de retrait DLC
         </button>
       </div>
@@ -590,37 +598,20 @@
   </div>
 
   <!-- Toast Notification -->
-  <div id="toastBox" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-slate-900/95 border border-cyan-500/50 text-xs font-semibold text-white shadow-xl"></div>
+  <div id="toastBox" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-slate-900/95 border border-cyan-500/50 text-xs font-semibold text-white shadow-xl"></div>
 
   <script>
-    // ==================== CATALOGUE CUISINE PAR DÉFAUT ====================
-    const DEFAULT_KITCHEN_PRODUCTS = [
-      { id: 'KP-1', name: 'Filet de Poulet Frais', category: 'Viandes & Poissons', unit: 'Bac 5 kg', image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-2', name: 'Steak Haché Pur Bœuf 150g', category: 'Viandes & Poissons', unit: 'Carton x30', image: 'https://images.unsplash.com/photo-1588168333986-5078d3ae3976?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-3', name: 'Pavé de Saumon Frais', category: 'Viandes & Poissons', unit: 'Caisse 3 kg', image: 'https://images.unsplash.com/photo-1599084993091-1cb5c0721cc6?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-4', name: 'Pommes de Terre Grenaille', category: 'Fruits & Légumes', unit: 'Sac 10 kg', image: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-5', name: 'Tomates Grappe Cuisine', category: 'Fruits & Légumes', unit: 'Cageot 5 kg', image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-6', name: 'Oignons Jaunes Calibre +', category: 'Fruits & Légumes', unit: 'Filet 5 kg', image: 'https://images.unsplash.com/photo-1508747703725-719777637510?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-7', name: 'Crème Liquide Entière 35%', category: 'Crèmerie & Frais', unit: 'Pack 6×1L', image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-8', name: 'Beurre Gastronomique Doux', category: 'Crèmerie & Frais', unit: 'Plaque 2.5 kg', image: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-9', name: 'Mozzarella Fior di Latte', category: 'Crèmerie & Frais', unit: 'Seau 2.5 kg', image: 'https://images.unsplash.com/photo-1559561853-08451507cbe7?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-10', name: 'Huile de Cuisson / Friture', category: 'Épicerie & Sec', unit: 'Bidon 10L', image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-11', name: 'Farine de Blé T55 Pro', category: 'Épicerie & Sec', unit: 'Sac 10 kg', image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=70' },
-      { id: 'KP-12', name: 'Eau Minérale & Sodas Service', category: 'Boissons', unit: 'Fardeau x24', image: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=400&q=70' }
-    ];
-
-    // ==================== ÉTAT GLOBAL CLOUD ====================
+    // ==================== ÉTAT GLOBAL CLOUD (AUCUN PRODUIT DE BASE) ====================
     let appState = {
       verifyItems: [],
       historyItems: [],
       sortieIds: [],
-      kitchenProducts: [...DEFAULT_KITCHEN_PRODUCTS],
+      kitchenProducts: [], // Vierge par défaut : alimenté par les Scans BL ou manuellement
       kitchenCart: {}
     };
 
     let currentHistoryFilter = 'all';
     let currentKitchenCategory = 'ALL';
-    let tempNewKitchenImage = '';
     let rollFormat = localStorage.getItem('optistock_roll_format') || '50x30';
     let customWidth = parseInt(localStorage.getItem('optistock_custom_w')) || 55;
     let customHeight = parseInt(localStorage.getItem('optistock_custom_h')) || 35;
@@ -644,7 +635,7 @@
       setTimeout(() => box.classList.add('hidden'), 2800);
     }
 
-    // ==================== GESTION DES FORMATS DE ROULEAU + SUR-MESURE ====================
+    // ==================== FORMATS DE ROULEAU + SUR-MESURE ====================
     function getRollDimensions() {
       if (rollFormat === 'CUSTOM') {
         return { w: customWidth || 55, h: customHeight || 35 };
@@ -657,11 +648,7 @@
       rollFormat = val;
       localStorage.setItem('optistock_roll_format', val);
       const customBox = document.getElementById('customRollBox');
-      if (val === 'CUSTOM') {
-        customBox.classList.remove('hidden');
-      } else {
-        customBox.classList.add('hidden');
-      }
+      customBox.classList.toggle('hidden', val !== 'CUSTOM');
       const { w, h } = getRollDimensions();
       document.getElementById('activeRollDimBadge').textContent = `${w} × ${h} mm`;
       document.getElementById('labelFormatTitleBadge').textContent = `${w}×${h} mm`;
@@ -688,15 +675,11 @@
         appState.verifyItems = Array.isArray(data.verifyItems) ? data.verifyItems : [];
         appState.historyItems = Array.isArray(data.historyItems) ? data.historyItems : [];
         appState.sortieIds = Array.isArray(data.sortieIds) ? data.sortieIds : [];
-        if (Array.isArray(data.kitchenProducts) && data.kitchenProducts.length > 0) {
-          appState.kitchenProducts = data.kitchenProducts;
-        }
-        if (data.kitchenCart && typeof data.kitchenCart === 'object') {
-          appState.kitchenCart = data.kitchenCart;
-        }
+        appState.kitchenProducts = Array.isArray(data.kitchenProducts) ? data.kitchenProducts : [];
+        appState.kitchenCart = (data.kitchenCart && typeof data.kitchenCart === 'object') ? data.kitchenCart : {};
         document.getElementById('lastSyncTimeDisplay').textContent = new Date().toLocaleTimeString('fr-FR');
         document.getElementById('statusStateApi').textContent = 'EN LIGNE • KV SYNC';
-        document.getElementById('homeQuickStatus').textContent = '● TOUS SERVICES OK';
+        document.getElementById('homeQuickStatus').textContent = '● CLOUD SYNCHRONISÉ';
         renderAll();
         if (manual) showToast('☁️ Synchronisation Cloud terminée');
       } catch (err) {
@@ -759,6 +742,7 @@
       document.getElementById('homeStatHistory').textContent = appState.historyItems.length;
       const cartUnits = Object.values(appState.kitchenCart || {}).reduce((s, q) => s + (parseInt(q) || 0), 0);
       document.getElementById('homeStatKitchen').textContent = cartUnits;
+      document.getElementById('homeCatalogCountBadge').textContent = `${appState.kitchenProducts.length} réf.`;
 
       const kBadge = document.getElementById('badgeKitchenNav');
       if (cartUnits > 0) {
@@ -769,24 +753,23 @@
       }
     }
 
-    // ==================== MODULE COMMANDE CUISINE & EXPORT PDF ====================
+    // ==================== MODULE COMMANDE EN LIGNES (SANS IMAGE) ====================
     function setKitchenCategory(cat) {
       currentKitchenCategory = cat;
       ['ALL', 'Viandes & Poissons', 'Fruits & Légumes', 'Crèmerie & Frais', 'Épicerie & Sec', 'Boissons', 'Hygiène & Emballage'].forEach(c => {
         const btn = document.getElementById('kcat-' + c);
         if (!btn) return;
-        if (c === cat) {
-          btn.className = 'px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 whitespace-nowrap font-extrabold';
-        } else {
-          btn.className = 'px-3 py-1.5 rounded-xl bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap';
-        }
+        btn.className = (c === cat)
+          ? 'px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 whitespace-nowrap font-bold'
+          : 'px-2.5 py-1 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 whitespace-nowrap';
       });
       renderKitchen();
     }
 
     function renderKitchen() {
-      const container = document.getElementById('kitchenGridContainer');
+      const container = document.getElementById('kitchenListContainer');
       const q = (document.getElementById('kitchenSearchInput')?.value || '').toLowerCase().trim();
+      document.getElementById('kitchenTotalCatalogCount').textContent = appState.kitchenProducts.length;
 
       const filtered = appState.kitchenProducts.filter(p => {
         if (currentKitchenCategory !== 'ALL' && p.category !== currentKitchenCategory) return false;
@@ -796,32 +779,43 @@
 
       const activeEntries = Object.entries(appState.kitchenCart || {}).filter(([_, qty]) => qty > 0);
       const totalUnits = activeEntries.reduce((s, [_, qty]) => s + qty, 0);
-      document.getElementById('kitchenCartSummary').textContent = `${activeEntries.length} produit(s) (${totalUnits} unité(s))`;
+      document.getElementById('kitchenCartSummary').textContent = `${activeEntries.length} ligne(s) (${totalUnits} unité(s))`;
 
       if (filtered.length === 0) {
-        container.innerHTML = `<div class="col-span-2 p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-400">Aucun produit trouvé. Cliquez sur "+ Nouveau Produit" pour l'ajouter avec photo.</div>`;
+        container.innerHTML = `
+          <div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center space-y-2">
+            <p class="text-xs font-bold text-slate-200">Aucun produit enregistré dans cette vue</p>
+            <p class="text-[11px] text-slate-400">Scannez un Bon de Livraison pour ajouter automatiquement ses produits ici, ou cliquez sur "+ Nouveau Produit".</p>
+          </div>`;
         return;
       }
 
       container.innerHTML = filtered.map(prod => {
         const qty = parseInt(appState.kitchenCart[prod.id]) || 0;
-        const imgSrc = prod.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=60';
         return `
-          <div class="rounded-2xl bg-slate-900 border ${qty > 0 ? 'border-amber-400 shadow-lg shadow-amber-500/10' : 'border-slate-800'} overflow-hidden flex flex-col justify-between">
-            <div class="relative h-28 bg-slate-950">
-              <img src="${imgSrc}" alt="${prod.name}" class="w-full h-full object-cover" />
-              <span class="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-md bg-black/75 text-[9px] text-amber-300 font-bold">${prod.unit || 'Unité'}</span>
-              <button type="button" onclick="deleteKitchenProduct('${prod.id}')" class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 text-rose-300 text-[10px] flex items-center justify-center">✕</button>
-            </div>
-            <div class="p-2.5 space-y-2 flex-1 flex flex-col justify-between">
-              <div>
-                <div class="text-[9px] text-slate-400 uppercase font-bold truncate">${prod.category}</div>
-                <h4 class="text-xs font-extrabold text-white leading-snug line-clamp-2">${prod.name}</h4>
+          <div class="p-2.5 rounded-xl bg-[#0f172a] border ${qty > 0 ? 'border-amber-400/80 bg-amber-950/10' : 'border-slate-800'} flex items-center justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-[10px] mono font-bold text-amber-300">${prod.unit || 'Colis'}</span>
+                <span class="text-[10px] text-slate-400 truncate">${prod.category || 'Général'}</span>
               </div>
-              <div class="flex items-center justify-between bg-slate-950 p-1 rounded-xl border border-slate-800">
-                <button type="button" onclick="updateKitchenQty('${prod.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-800 text-white font-black text-sm">-</button>
-                <span class="mono text-xs font-black ${qty > 0 ? 'text-amber-400' : 'text-slate-500'}">${qty}</span>
-                <button type="button" onclick="updateKitchenQty('${prod.id}', 1)" class="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-black text-sm">+</button>
+              <h4 class="text-xs font-bold text-white truncate mt-1">${prod.name}</h4>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+              <!-- Boutons Modifier & Supprimer le produit -->
+              <button type="button" onclick="openKitchenModal('${prod.id}')" title="Modifier ce produit" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs flex items-center justify-center">
+                ✏️
+              </button>
+              <button type="button" onclick="deleteKitchenProduct('${prod.id}')" title="Supprimer ce produit" class="w-7 h-7 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-center">
+                🗑️
+              </button>
+
+              <!-- Sélecteur de quantité à commander -->
+              <div class="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 ml-1">
+                <button type="button" onclick="updateKitchenQty('${prod.id}', -1)" class="w-7 h-7 rounded bg-slate-800 text-white font-black text-xs">-</button>
+                <span class="w-7 text-center mono text-xs font-black ${qty > 0 ? 'text-amber-400' : 'text-slate-500'}">${qty}</span>
+                <button type="button" onclick="updateKitchenQty('${prod.id}', 1)" class="w-7 h-7 rounded bg-amber-500 text-slate-950 font-black text-xs">+</button>
               </div>
             </div>
           </div>
@@ -840,22 +834,32 @@
     function clearKitchenCart() {
       appState.kitchenCart = {};
       pushToCloud();
-      showToast('🧹 Panier de commande réinitialisé');
+      showToast('🧹 Quantités de commande remises à 0');
     }
 
     function deleteKitchenProduct(id) {
       appState.kitchenProducts = appState.kitchenProducts.filter(p => p.id !== id);
       delete appState.kitchenCart[id];
       pushToCloud();
-      showToast('🗑️ Produit retiré du catalogue');
+      showToast('🗑️ Produit supprimé du référentiel');
     }
 
-    function openKitchenModal() {
-      tempNewKitchenImage = '';
-      document.getElementById('kModalName').value = '';
-      document.getElementById('kModalUnit').value = 'Colis';
-      document.getElementById('kitchenModalPreviewImg').classList.add('hidden');
-      document.getElementById('kitchenModalPhotoPrompt').classList.remove('hidden');
+    function openKitchenModal(editId = null) {
+      if (editId) {
+        const prod = appState.kitchenProducts.find(p => p.id === editId);
+        if (!prod) return;
+        document.getElementById('kModalTitle').textContent = 'Modifier le produit';
+        document.getElementById('kModalEditId').value = prod.id;
+        document.getElementById('kModalName').value = prod.name;
+        document.getElementById('kModalUnit').value = prod.unit || 'Colis';
+        document.getElementById('kModalCat').value = prod.category || 'Épicerie & Sec';
+      } else {
+        document.getElementById('kModalTitle').textContent = 'Nouveau produit commande';
+        document.getElementById('kModalEditId').value = '';
+        document.getElementById('kModalName').value = '';
+        document.getElementById('kModalUnit').value = 'Colis';
+        document.getElementById('kModalCat').value = 'Épicerie & Sec';
+      }
       document.getElementById('kitchenModal').classList.remove('hidden');
     }
 
@@ -863,54 +867,36 @@
       document.getElementById('kitchenModal').classList.add('hidden');
     }
 
-    function handleKitchenPhotoUpload(event) {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.getElementById('captureCanvas');
-          const maxDim = 420;
-          let w = img.width, h = img.height;
-          if (w > maxDim || h > maxDim) {
-            if (w > h) { h = Math.round(h * (maxDim / w)); w = maxDim; }
-            else { w = Math.round(w * (maxDim / h)); h = maxDim; }
-          }
-          canvas.width = w;
-          canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          tempNewKitchenImage = canvas.toDataURL('image/jpeg', 0.72);
-          const prev = document.getElementById('kitchenModalPreviewImg');
-          prev.src = tempNewKitchenImage;
-          prev.classList.remove('hidden');
-          document.getElementById('kitchenModalPhotoPrompt').classList.add('hidden');
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function saveNewKitchenProduct() {
+    function saveKitchenProductModal() {
+      const editId = document.getElementById('kModalEditId').value;
       const name = document.getElementById('kModalName').value.trim();
       if (!name) {
-        showToast('⚠️ Veuillez saisir le nom du produit');
+        showToast('⚠️ Veuillez saisir la désignation du produit');
         return;
       }
+      const unit = document.getElementById('kModalUnit').value.trim() || 'Colis';
       const category = document.getElementById('kModalCat').value;
-      const unit = document.getElementById('kModalUnit').value.trim() || 'Unité';
-      const newProd = {
-        id: 'KP-' + Date.now(),
-        name,
-        category,
-        unit,
-        image: tempNewKitchenImage || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=60'
-      };
-      appState.kitchenProducts.unshift(newProd);
-      appState.kitchenCart[newProd.id] = 1;
+
+      if (editId) {
+        const prod = appState.kitchenProducts.find(p => p.id === editId);
+        if (prod) {
+          prod.name = name;
+          prod.unit = unit;
+          prod.category = category;
+        }
+        showToast('✏️ Produit mis à jour');
+      } else {
+        const newProd = {
+          id: 'KP-' + Date.now(),
+          name,
+          unit,
+          category
+        };
+        appState.kitchenProducts.unshift(newProd);
+        showToast('✅ Produit enregistré');
+      }
       closeKitchenModal();
       pushToCloud();
-      showToast('✅ Produit ajouté au catalogue et à la commande');
     }
 
     function exportKitchenOrderPDF() {
@@ -927,13 +913,10 @@
       const rowsHtml = ordered.map((p, idx) => `
         <tr style="border-bottom:1px solid #cbd5e1;">
           <td style="padding:8px;font-weight:700;">${idx + 1}</td>
-          <td style="padding:8px;"><img src="${p.image}" style="width:42px;height:42px;object-fit:cover;border-radius:6px;border:1px solid #94a3b8;" /></td>
-          <td style="padding:8px;">
-            <div style="font-weight:800;font-size:11pt;color:#0f172a;">${p.name}</div>
-            <div style="font-size:8.5pt;color:#475569;">${p.category}</div>
-          </td>
-          <td style="padding:8px;font-size:9.5pt;font-weight:600;">${p.unit}</td>
-          <td style="padding:8px;text-align:center;font-size:13pt;font-weight:900;color:#0f172a;">${appState.kitchenCart[p.id]}</td>
+          <td style="padding:8px;font-weight:800;font-size:10.5pt;color:#0f172a;">${p.name}</td>
+          <td style="padding:8px;font-size:9pt;color:#475569;">${p.category || '-'}</td>
+          <td style="padding:8px;font-size:9.5pt;font-weight:700;font-family:monospace;">${p.unit || 'Colis'}</td>
+          <td style="padding:8px;text-align:center;font-size:12pt;font-weight:900;color:#0f172a;">${appState.kitchenCart[p.id]}</td>
           <td style="padding:8px;text-align:center;">☐</td>
         </tr>
       `).join('');
@@ -943,24 +926,24 @@
         <div class="print-order-a4">
           <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #0f172a;padding-bottom:10px;margin-bottom:16px;">
             <div>
-              <div style="font-size:18pt;font-weight:900;color:#0f172a;">BON DE COMMANDE CUISINE & RESTAURANT</div>
-              <div style="font-size:9.5pt;color:#334155;">Généré par OptiStock Pro le ${dateStr} à ${timeStr}</div>
+              <div style="font-size:16pt;font-weight:900;color:#0f172a;">BON DE COMMANDE FOURNISSEUR</div>
+              <div style="font-size:9.5pt;color:#334155;">Édité sur OptiStock Pro le ${dateStr} à ${timeStr}</div>
             </div>
-            <div style="text-align:right;font-family:monospace;font-size:10pt;font-weight:800;border:2px solid #0f172a;padding:6px 10px;border-radius:8px;">
+            <div style="text-align:right;font-family:monospace;font-size:9.5pt;font-weight:800;border:2px solid #0f172a;padding:6px 10px;border-radius:6px;">
               RÉF: CMD-${Date.now().toString().slice(-5)}<br/>
-              TOTAL LIGNES: ${ordered.length}
+              LIGNES: ${ordered.length}
             </div>
           </div>
 
-          <table style="width:100%;border-collapse:collapse;font-size:10pt;">
+          <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
             <thead>
               <tr style="background:#f1f5f9;border-bottom:2px solid #0f172a;text-align:left;">
                 <th style="padding:8px;">#</th>
-                <th style="padding:8px;">Visuel</th>
-                <th style="padding:8px;">Désignation / Catégorie</th>
-                <th style="padding:8px;">Unité</th>
-                <th style="padding:8px;text-align:center;">Quantité à commander</th>
-                <th style="padding:8px;text-align:center;">Pointage</th>
+                <th style="padding:8px;">Désignation Produit</th>
+                <th style="padding:8px;">Catégorie</th>
+                <th style="padding:8px;">Conditionnement</th>
+                <th style="padding:8px;text-align:center;">Quantité</th>
+                <th style="padding:8px;text-align:center;">Reçu</th>
               </tr>
             </thead>
             <tbody>
@@ -974,7 +957,7 @@
       setTimeout(() => changeRollFormat(rollFormat, false), 1500);
     }
 
-    // ==================== CAMÉRA, FICHIERS & BOUTON SCAN ====================
+    // ==================== CAMÉRA, FICHIERS & SCAN GEMINI 3.0 ====================
     function openGalleryPicker() {
       const input = document.getElementById('fileInputGallery');
       input.value = '';
@@ -1084,10 +1067,17 @@
           return;
         }
 
+        let addedToCatalog = 0;
+
         items.forEach((it, idx) => {
+          const cleanName = (it.name || 'Article sans nom').trim();
+          const cleanUnit = (it.unit || 'Colis').trim();
+          const cleanCat = it.category || 'Épicerie & Sec';
+
+          // 1. Ajout dans la file d'étiquettes à vérifier
           appState.verifyItems.push({
             id: 'V-' + Date.now() + '-' + idx,
-            name: it.name || 'Article sans nom',
+            name: cleanName,
             dlc: it.dlc || today,
             receivedDate: receivedDate,
             lot: it.lot || ('LOT-' + Math.floor(100 + Math.random() * 899)),
@@ -1095,11 +1085,27 @@
             blNumber: blNumber,
             qty: 1
           });
+
+          // 2. Ajout automatique dans le référentiel Commande (sans doublon sur le nom)
+          const existingProd = appState.kitchenProducts.find(
+            p => p.name.toLowerCase() === cleanName.toLowerCase()
+          );
+          if (!existingProd) {
+            appState.kitchenProducts.unshift({
+              id: 'KP-' + Date.now() + '-' + idx,
+              name: cleanName,
+              unit: cleanUnit,
+              category: cleanCat
+            });
+            addedToCatalog++;
+          } else if (cleanUnit && existingProd.unit === 'Colis') {
+            existingProd.unit = cleanUnit;
+          }
         });
 
         await pushToCloud();
         overlay.classList.add('hidden');
-        showToast(`✅ ${items.length} produit(s) extraits`);
+        showToast(`✅ ${items.length} réf. extraites (+${addedToCatalog} au catalogue commande)`);
         switchTab('verifier');
       } catch (err) {
         overlay.classList.add('hidden');
@@ -1140,11 +1146,10 @@
 
       if (totalRefs === 0) {
         container.innerHTML = `
-          <div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
-            <div class="text-3xl">✅</div>
+          <div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center space-y-3">
             <p class="text-sm font-bold text-white">Aucune étiquette en attente</p>
             <p class="text-xs text-slate-400">Scannez un BL ou ajoutez manuellement une étiquette.</p>
-            <button type="button" onclick="switchTab('scanner')" class="px-4 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">
+            <button type="button" onclick="switchTab('scanner')" class="px-4 py-2 rounded-lg bg-cyan-500 text-slate-950 font-bold text-xs">
               Scanner un BL
             </button>
           </div>`;
@@ -1152,32 +1157,32 @@
       }
 
       container.innerHTML = appState.verifyItems.map(item => `
-        <div class="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
+        <div class="p-3 rounded-xl bg-[#0f172a] border border-slate-800 space-y-2">
           <div class="flex items-start justify-between gap-2">
             <div>
               <span class="text-[10px] mono text-slate-400">${item.blNumber || 'BL'} • ${item.lot}</span>
               <h4 class="text-sm font-bold text-white">${item.name}</h4>
             </div>
-            <div class="text-right bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+            <div class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
               <div class="text-[9px] text-slate-400 uppercase">DLC / DLUO</div>
               <div class="text-xs font-extrabold text-amber-400 mono">${formatDateFR(item.dlc)}</div>
             </div>
           </div>
 
-          <div class="flex items-center justify-between text-xs text-slate-300 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800/80">
+          <div class="flex items-center justify-between text-xs text-slate-300 bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800/80">
             <span>Reçu le : <strong class="mono text-white">${formatDateFR(item.receivedDate)}</strong></span>
             <div class="flex items-center gap-2">
-              <button type="button" onclick="changeVerifyQty('${item.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-800 font-bold">-</button>
+              <button type="button" onclick="changeVerifyQty('${item.id}', -1)" class="w-7 h-7 rounded bg-slate-800 font-bold">-</button>
               <span class="mono font-bold text-cyan-300">${item.qty} étiq.</span>
-              <button type="button" onclick="changeVerifyQty('${item.id}', 1)" class="w-7 h-7 rounded-lg bg-slate-800 font-bold">+</button>
+              <button type="button" onclick="changeVerifyQty('${item.id}', 1)" class="w-7 h-7 rounded bg-slate-800 font-bold">+</button>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 pt-1">
-            <button type="button" onclick="openItemModal('${item.id}')" class="py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
+          <div class="grid grid-cols-2 gap-2 pt-0.5">
+            <button type="button" onclick="openItemModal('${item.id}')" class="py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">
               ✏️ Éditer
             </button>
-            <button type="button" onclick="deleteVerifyItem('${item.id}')" class="py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-semibold text-rose-300">
+            <button type="button" onclick="deleteVerifyItem('${item.id}')" class="py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-semibold text-rose-300">
               🗑️ Supprimer l'étiquette
             </button>
           </div>
@@ -1260,7 +1265,7 @@
       currentHistoryFilter = filter;
       ['all', 'expired', 'short', 'valid'].forEach(f => {
         const btn = document.getElementById('filter-' + f);
-        btn.className = (f === filter) ? 'py-1.5 rounded-lg bg-cyan-500 text-slate-950' : 'py-1.5 rounded-lg text-slate-400';
+        btn.className = (f === filter) ? 'py-1.5 rounded bg-cyan-500 text-slate-950' : 'py-1.5 rounded text-slate-400';
       });
       renderHistory();
     }
@@ -1295,7 +1300,7 @@
       });
 
       if (filtered.length === 0) {
-        container.innerHTML = `<div class="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-400">Aucune étiquette dans cette catégorie.</div>`;
+        container.innerHTML = `<div class="p-6 rounded-xl bg-[#0f172a] border border-slate-800 text-center text-xs text-slate-400">Aucune étiquette dans cette catégorie.</div>`;
         return;
       }
 
@@ -1304,15 +1309,15 @@
         const inSortie = appState.sortieIds.includes(item.id);
         let statusBadge = '';
         if (diff < 0) {
-          statusBadge = `<span class="px-2 py-0.5 rounded-md bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10px] font-bold">DATE PASSÉE (${diff}j)</span>`;
+          statusBadge = `<span class="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10px] font-bold">DATE PASSÉE (${diff}j)</span>`;
         } else if (diff <= 7) {
-          statusBadge = `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">DATE COURTE (J-${diff})</span>`;
+          statusBadge = `<span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">DATE COURTE (J-${diff})</span>`;
         } else {
-          statusBadge = `<span class="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold">VALIDE (+${diff}j)</span>`;
+          statusBadge = `<span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold">VALIDE (+${diff}j)</span>`;
         }
 
         return `
-          <div class="p-3.5 rounded-2xl bg-slate-900 border ${inSortie ? 'border-rose-500/60' : 'border-slate-800'} space-y-2.5">
+          <div class="p-3 rounded-xl bg-[#0f172a] border ${inSortie ? 'border-rose-500/60' : 'border-slate-800'} space-y-2">
             <div class="flex items-start justify-between gap-2">
               <div class="space-y-1">
                 <div class="flex items-center gap-1.5 flex-wrap">
@@ -1322,22 +1327,22 @@
                 </div>
                 <h4 class="text-sm font-bold text-white pt-0.5">${item.name}</h4>
               </div>
-              <div class="text-right bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+              <div class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
                 <div class="text-[9px] text-slate-400 uppercase">DLC / DLUO</div>
                 <div class="text-xs font-extrabold ${diff < 0 ? 'text-rose-400' : 'text-cyan-300'} mono">${formatDateFR(item.dlc)}</div>
               </div>
             </div>
 
-            <div class="flex items-center justify-between text-xs bg-slate-950/90 px-3 py-2 rounded-xl border border-slate-800/80">
+            <div class="flex items-center justify-between text-xs bg-slate-950/90 px-3 py-1.5 rounded-lg border border-slate-800/80">
               <span class="text-slate-400">Reçu: <strong class="mono text-white">${formatDateFR(item.receivedDate)}</strong></span>
               <span class="mono font-bold text-cyan-400">${item.lot}</span>
             </div>
 
             <div class="grid grid-cols-2 gap-2 pt-0.5">
-              <button type="button" onclick="printSingleHistoryLabel('${item.id}')" class="py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/50 text-cyan-200 font-bold text-xs">
+              <button type="button" onclick="printSingleHistoryLabel('${item.id}')" class="py-2 rounded-lg bg-cyan-950/80 hover:bg-cyan-900/80 border border-cyan-700/50 text-cyan-200 font-bold text-xs">
                 🖨️ Sortir l'étiquette
               </button>
-              <button type="button" onclick="toggleItemSortie('${item.id}')" class="py-2 rounded-xl ${inSortie ? 'bg-rose-600 text-white' : 'bg-slate-800 text-rose-300 border border-rose-500/30'} font-bold text-xs">
+              <button type="button" onclick="toggleItemSortie('${item.id}')" class="py-2 rounded-lg ${inSortie ? 'bg-rose-600 text-white' : 'bg-slate-800 text-rose-300 border border-rose-500/30'} font-bold text-xs">
                 ${inSortie ? '↩️ Retirer de la sortie' : '📤 Sortir date passée'}
               </button>
             </div>
@@ -1382,7 +1387,7 @@
         return;
       }
       list.innerHTML = items.map(item => `
-        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
+        <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between gap-2">
           <div>
             <div class="text-xs font-bold text-white">${item.name}</div>
             <div class="text-[10px] mono text-rose-400">DLC: ${formatDateFR(item.dlc)} • ${item.lot}</div>
